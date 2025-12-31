@@ -12,25 +12,14 @@ from apps.api_proxy.client import get_backend_client
 @login_required
 @require_http_methods(["GET"])
 def index(request):
-    """Homepage showing uploaded files and upload form."""
-    client = get_backend_client()
+    """Homepage showing dashboard with system overview."""
+    health = get_backend_health()
+    dashboard = get_dashboard_data()
     
-    # Get backend health
-    backend_health = get_backend_health()
-    
-    # Get user's uploaded files
-    files = []
-    try:
-        files_response = client.get('/api/artifacts/', auth=request.user)
-        if files_response and isinstance(files_response, list):
-            files = files_response
-    except Exception as e:
-        messages.error(request, f"Error loading files: {e}")
-    
-    return render(request, 'ui/index.html', {
-        'backend_health': backend_health,
-        'files': files,
-        'file_count': len(files)
+    return render(request, 'ui/dashboard.html', {
+        'health': health,
+        'overview': dashboard.get('overview', {}) if dashboard else {},
+        'recent_jobs': dashboard.get('recent_jobs', []) if dashboard else []
     })
 
 

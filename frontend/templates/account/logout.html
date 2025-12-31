@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Logout | AfterResume</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="AfterResume - AI-powered work tracking and resume generation">
+    <meta name="author" content="AfterResume">
+
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
+
+    <!-- Theme Config Js -->
+    <script src="{% static 'js/config.js' %}"></script>
+
+    <!-- Vendor css -->
+    <link href="{% static 'css/vendors.min.css' %}" rel="stylesheet" type="text/css">
+
+    <!-- App css -->
+    <link href="{% static 'css/app.min.css' %}" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+
+    <div class="auth-box d-flex align-items-center">
+        <div class="container-xxl">
+            <div class="row align-items-center justify-content-center">
+                <div class="col-xl-6">
+                    <div class="card rounded-4">
+                        <div class="card-body text-center p-5">
+                            <div class="auth-brand mb-4">
+                                <a href="{% url 'ui:home' %}" class="logo-dark">
+                                    <img src="{% static 'img/logo-black.png' %}" alt="dark logo" height="32">
+                                </a>
+                                <a href="{% url 'ui:home' %}" class="logo-light">
+                                    <img src="{% static 'img/logo.png' %}" alt="logo" height="32">
+                                </a>
+                            </div>
+
+                            <h4 class="fw-bold mb-3">Sign Out</h4>
+                            <p class="text-muted mb-4">Are you sure you want to sign out?</p>
+
+                            <form method="post" action="{% url 'account_logout' %}">
+                                {% csrf_token %}
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-danger fw-semibold py-2">Yes, Sign Me Out</button>
+                                    <a href="{% url 'ui:home' %}" class="btn btn-outline-secondary fw-semibold py-2">Cancel</a>
+                                </div>
+                            </form>
+
+                            <p class="text-center text-muted mt-4 mb-0">
+                                © 2025 AfterResume
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor js -->
+    <script src="{% static 'js/vendor.min.js' %}"></script>
+
+    <!-- App js -->
+    <script src="{% static 'js/app.min.js' %}"></script>
+
+</body>
+
+</html>

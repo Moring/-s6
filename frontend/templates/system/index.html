@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System Dashboard - AfterResume{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="page-title-box">
+            <h4 class="page-title">System Dashboard</h4>
+            <p class="text-muted">Monitor system health, jobs, and schedules</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Total Jobs</h5>
+                        <h3 class="my-2 py-1">{{ overview.jobs.total|default:0 }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-soft-primary text-primary rounded">
+                            <i class="ti ti-server fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Running</h5>
+                        <h3 class="my-2 py-1 text-primary">{{ overview.jobs.running|default:0 }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-soft-primary text-primary rounded">
+                            <i class="ti ti-refresh fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Success</h5>
+                        <h3 class="my-2 py-1 text-success">{{ overview.jobs.success|default:0 }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-soft-success text-success rounded">
+                            <i class="ti ti-check fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Failed</h5>
+                        <h3 class="my-2 py-1 text-danger">{{ overview.jobs.failed|default:0 }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-soft-danger text-danger rounded">
+                            <i class="ti ti-x fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title mb-3">System Jobs</h4>
+                
+                <div id="system-jobs" hx-get="/system/jobs/" hx-trigger="load, every 5s" hx-swap="innerHTML">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading jobs...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title mb-3">Scheduled Tasks</h4>
+                
+                <div id="schedules" hx-get="/system/schedules/" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title mb-3">Health Check</h4>
+                
+                <div id="health-status" hx-get="/system/health/" hx-trigger="load, every 10s" hx-swap="innerHTML">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

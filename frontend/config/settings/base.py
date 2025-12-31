@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     # Local apps
+    'apps.accounts',
     'apps.ui',
     'apps.api_proxy',
 ]

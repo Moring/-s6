@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Skills - AfterResume{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <button class="btn btn-primary" hx-post="/skills/recompute/" hx-target="#skills-content">
+                    <i class="ti ti-refresh me-1"></i> Recompute Skills
+                </button>
+            </div>
+            <h4 class="page-title">Skills</h4>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title mb-3">Extracted Skills</h4>
+                <p class="text-muted">AI-extracted skills from your work logs.</p>
+                
+                <div id="skills-content" hx-get="/skills/list/" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading skills...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

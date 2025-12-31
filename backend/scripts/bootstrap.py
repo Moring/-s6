@@ -74,29 +74,36 @@ def main():
         print(f"✗ Migrations failed: {exc}")
         raise
     
-    # Create superuser if env vars provided
-    admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
-    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-    
-    print(f"\nChecking for superuser: {admin_user}")
-    user = None
-    if not User.objects.filter(username=admin_user).exists():
-        user = User.objects.create_superuser(
-            username=admin_user,
-            email=admin_email,
-            password=admin_password
-        )
-        print(f"✓ Superuser created: {admin_user}")
-    else:
-        user = User.objects.get(username=admin_user)
-        print(f"✓ Superuser already exists: {admin_user}")
-    
-    # Create tenant for admin user
-    if user:
-        print(f"\nCreating tenant for {admin_user}...")
-        tenant = create_tenant_for_user(user)
-        print(f"✓ Tenant created: {tenant.name}")
+    # Create superuser and profile using management command
+    print(f"\nBootstrapping admin user...")
+    try:
+        call_command('bootstrap_admin')
+        print(f"✓ Admin bootstrap complete")
+    except Exception as exc:
+        print(f"✗ Admin bootstrap failed: {exc}")
+        # Try legacy method as fallback
+        admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        
+        print(f"\nChecking for superuser: {admin_user}")
+        user = None
+        if not User.objects.filter(username=admin_user).exists():
+            user = User.objects.create_superuser(
+                username=admin_user,
+                email=admin_email,
+                password=admin_password
+            )
+            print(f"✓ Superuser created: {admin_user}")
+        else:
+            user = User.objects.get(username=admin_user)
+            print(f"✓ Superuser already exists: {admin_user}")
+        
+        # Create tenant for admin user
+        if user:
+            print(f"\nCreating tenant for {admin_user}...")
+            tenant = create_tenant_for_user(user)
+            print(f"✓ Tenant created: {tenant.name}")
     
     # Create Site for allauth
     from django.contrib.sites.models import Site

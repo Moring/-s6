@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     'huey.contrib.djhuey',
     # Core apps
     'apps.tenants',
+    'apps.accounts',
+    'apps.invitations',
+    'apps.auditing',
     'apps.artifacts',
     # Domain apps
     'apps.worklog',
@@ -241,3 +244,31 @@ REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
 REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
     'rest_framework.permissions.IsAuthenticated',
 ]
+
+# Cache configuration (Valkey/Redis)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django.core.cache.backends.redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'afterresume',
+    }
+}
+
+# Session Security
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Allow remember me
+SESSION_SAVE_EVERY_REQUEST = True  # Sliding window
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'  # True in production
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_NAME = 'afterresume_session'
+
+# CSRF Protection
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Rate Limiting Cache (uses Valkey/Redis)

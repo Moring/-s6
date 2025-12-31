@@ -4,8 +4,10 @@ URL configuration for UI app.
 from django.urls import path
 from . import views
 
+app_name = 'ui'
+
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.index, name='home'),
     path('upload/', views.upload_file, name='upload_file'),
     path('health/', views.health, name='health'),
     path('jobs/', views.jobs_list, name='jobs_list'),
