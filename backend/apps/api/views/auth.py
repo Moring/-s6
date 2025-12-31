@@ -11,7 +11,6 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.contrib.auth.models import User
-from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import services as account_services
 from apps.accounts.serializers import UserSerializer
@@ -19,6 +18,7 @@ from apps.invitations import services as invite_services
 from apps.invitations.serializers import InvitePasskeySerializer, PasskeyCreateSerializer
 from apps.auditing.serializers import AuthEventSerializer
 from apps.auditing.models import AuthEvent
+from apps.api.rate_limiting import rate_limit, AUTH_RATE_LIMITER, SIGNUP_RATE_LIMITER, PASSKEY_RATE_LIMITER
 
 
 def get_client_ip(request):
@@ -36,7 +36,7 @@ def get_user_agent(request):
     return request.META.get('HTTP_USER_AGENT', '')
 
 
-@ratelimit(key='ip', rate='5/m', method='POST')
+@rate_limit(SIGNUP_RATE_LIMITER)
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
 @permission_classes([AllowAny])
@@ -93,7 +93,7 @@ def signup(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@ratelimit(key='ip', rate='10/m', method='POST')
+@rate_limit(AUTH_RATE_LIMITER)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
@@ -172,7 +172,7 @@ def me(request):
     return Response(serializer.data)
 
 
-@ratelimit(key='ip', rate='10/m', method='POST')
+@rate_limit(AUTH_RATE_LIMITER)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_token(request):

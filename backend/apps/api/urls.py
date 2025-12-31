@@ -2,7 +2,7 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status, attachments
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status, attachments, system_controls
 
 urlpatterns = [
     # Health
@@ -32,6 +32,14 @@ urlpatterns = [
     
     # Admin - Audit
     path('admin/audit-events/', admin.list_audit_events, name='admin-audit-events'),
+    
+    # System Controls (Phase 2)
+    path('admin/system-controls/', system_controls.system_controls_view, name='system-controls'),
+    path('admin/system-controls/feature-flag/', system_controls.toggle_feature_flag, name='toggle-feature-flag'),
+    path('admin/failed-jobs/', system_controls.failed_jobs_view, name='failed-jobs'),
+    path('admin/failed-jobs/<uuid:job_id>/retry/', system_controls.retry_failed_job, name='retry-failed-job'),
+    path('admin/rate-limits/', system_controls.rate_limit_status_view, name='rate-limits'),
+    path('admin/rate-limits/reset/', system_controls.reset_rate_limit, name='reset-rate-limit'),
     
     # System Metrics (Admin only)
     path('system/metrics/summary/', system_metrics.metrics_summary, name='system-metrics-summary'),

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from apps.skills.models import Skill, SkillEvidence
 from apps.skills.serializers import SkillSerializer, SkillEvidenceSerializer
 from apps.jobs.dispatcher import enqueue
+from apps.api.rate_limiting import rate_limit, AI_ACTION_RATE_LIMITER
 
 
 class SkillListView(generics.ListAPIView):
@@ -30,6 +31,7 @@ class SkillEvidenceView(generics.ListAPIView):
         return SkillEvidence.objects.filter(skill_id=skill_id)
 
 
+@rate_limit(AI_ACTION_RATE_LIMITER)
 @api_view(['POST'])
 def recompute_skills(request):
     """Enqueue skills extraction job."""

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from apps.worklog.models import WorkLog
 from apps.worklog.serializers import WorkLogSerializer
 from apps.jobs.dispatcher import enqueue
+from apps.api.rate_limiting import rate_limit, AI_ACTION_RATE_LIMITER
 
 
 class WorkLogListCreateView(generics.ListCreateAPIView):
@@ -30,6 +31,7 @@ class WorkLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WorkLogSerializer
 
 
+@rate_limit(AI_ACTION_RATE_LIMITER)
 @api_view(['POST'])
 def analyze_worklog(request, pk):
     """Enqueue worklog analysis job."""

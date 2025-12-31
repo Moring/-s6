@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from apps.reporting.models import Report
 from apps.reporting.serializers import ReportSerializer
 from apps.jobs.dispatcher import enqueue
+from apps.api.rate_limiting import rate_limit, REPORT_RATE_LIMITER, AI_ACTION_RATE_LIMITER
 
 
 class ReportListView(generics.ListAPIView):
@@ -27,6 +28,7 @@ class ReportListView(generics.ListAPIView):
         return qs
 
 
+@rate_limit(REPORT_RATE_LIMITER)
 @api_view(['POST'])
 def generate_report_view(request):
     """Enqueue report generation job."""
@@ -51,6 +53,7 @@ def generate_report_view(request):
     }, status=status.HTTP_202_ACCEPTED)
 
 
+@rate_limit(AI_ACTION_RATE_LIMITER)
 @api_view(['POST'])
 def refresh_resume_view(request):
     """Enqueue resume refresh job."""
