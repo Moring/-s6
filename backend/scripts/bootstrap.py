@@ -117,6 +117,25 @@ def main():
     else:
         print("✓ Site already exists")
     
+    # Create scheduled jobs
+    print("\nSetting up scheduled jobs...")
+    from apps.jobs.models import Schedule
+    
+    # Daily metrics computation
+    metrics_schedule, created = Schedule.objects.get_or_create(
+        name='daily_metrics_computation',
+        defaults={
+            'job_type': 'system.compute_metrics',
+            'cron': '@daily',
+            'payload': {'bucket': 'daily', 'lookback_days': 30},
+            'enabled': True
+        }
+    )
+    if created:
+        print("✓ Daily metrics computation schedule created")
+    else:
+        print("✓ Daily metrics computation schedule already exists")
+    
     print("\n=== Bootstrap Complete ===")
     print("\nServices ready:")
     print("  • Database: ✓")
