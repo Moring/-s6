@@ -17,13 +17,20 @@ def create_worklog(
     metadata: Optional[dict] = None
 ) -> WorkLog:
     """Create a new work log entry."""
-    return WorkLog.objects.create(
+    worklog = WorkLog.objects.create(
         user=user,
         date=date,
         content=content,
         source=source,
         metadata=metadata or {}
     )
+    
+    # Trigger reward evaluation asynchronously
+    if user:
+        from apps.gamification.services import trigger_reward_evaluation
+        trigger_reward_evaluation(worklog.id, user.id)
+    
+    return worklog
 
 
 def update_worklog(worklog_id: int, **kwargs) -> Optional[WorkLog]:
@@ -33,6 +40,12 @@ def update_worklog(worklog_id: int, **kwargs) -> Optional[WorkLog]:
         for key, value in kwargs.items():
             setattr(worklog, key, value)
         worklog.save()
+        
+        # Trigger reward evaluation asynchronously on update
+        if worklog.user:
+            from apps.gamification.services import trigger_reward_evaluation
+            trigger_reward_evaluation(worklog.id, worklog.user.id)
+        
         return worklog
     except WorkLog.DoesNotExist:
         return None

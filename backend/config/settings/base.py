@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'apps.worklog',
     'apps.skills',
     'apps.reporting',
+    'apps.gamification',
     'apps.jobs',
     'apps.observability',
     # Infrastructure apps

@@ -2,7 +2,7 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status, attachments, system_controls
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status, attachments, system_controls, gamification
 
 urlpatterns = [
     # Health
@@ -89,4 +89,15 @@ urlpatterns = [
     path('billing/admin/usage/costs/', billing.admin_usage_costs, name='billing-admin-usage-costs'),
     path('billing/admin/reserve/adjust/', billing.admin_adjust_reserve, name='billing-admin-adjust-reserve'),
     path('billing/admin/ledger/export.csv', billing.admin_export_ledger_csv, name='billing-admin-export-csv'),
+    
+    # Gamification - User endpoints
+    path('gamification/summary/', gamification.GamificationSummaryView.as_view(), name='gamification-summary'),
+    path('gamification/badges/', gamification.BadgesView.as_view(), name='gamification-badges'),
+    path('gamification/challenges/', gamification.ChallengesView.as_view(), name='gamification-challenges'),
+    path('gamification/settings/', gamification.GamificationSettingsView.as_view(), name='gamification-settings'),
+    
+    # Gamification - Admin endpoints
+    path('admin/gamification/metrics/', gamification.AdminGamificationMetricsView.as_view(), name='admin-gamification-metrics'),
+    path('admin/gamification/grant/', gamification.AdminManualXPGrantView.as_view(), name='admin-gamification-grant'),
+    path('admin/gamification/revoke/', gamification.AdminManualBadgeRevokeView.as_view(), name='admin-gamification-revoke'),
 ]

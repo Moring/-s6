@@ -36,6 +36,7 @@ def _load_workflows():
         from apps.orchestration.workflows import report_generate
         from apps.orchestration.workflows import resume_refresh
         from apps.orchestration.workflows import metrics_compute
+        from apps.orchestration.workflows import reward_evaluate
     except ImportError:
         pass  # Workflows may not be available yet during initial setup
 

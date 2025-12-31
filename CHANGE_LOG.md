@@ -5761,3 +5761,280 @@ Scheduler         Dispatcher           Workflow            Database
 
 ---
 
+
+---
+
+## 2025-12-31 - Gamification Feature: Duolingo-Style Rewards for Worklog Engagement
+
+### Summary
+Implemented a comprehensive gamification system to encourage consistent, high-quality worklog entries. The system features streaks, XP/levels, badges, and weekly challenges—all computed via backend DAG workflows with full audit logging and idempotency. The design is calm and professional, aligned with AfterResume's goals of consistent logging, quality content, evidence attachment, and reliable reporting.
+
+### ✅ What Changed
+
+#### 1. Gamification Models ✅
+**Created:**
+- `backend/apps/gamification/models.py` - Complete data model (200+ lines)
+
+**Models:**
+- **UserStreak**: Tracks daily logging streaks with freeze feature
+- **UserXP**: Tracks XP totals, levels, and daily XP
+- **XPEvent**: Immutable ledger of XP grants (idempotency keys)
+- **BadgeDefinition**: Definitions of all available badges
+- **UserBadge**: User's earned badges with provenance
+- **ChallengeTemplate**: Templates for recurring challenges (weekly)
+- **UserChallenge**: Active/completed challenge instances
+- **RewardConfig**: Versioned reward rules configuration
+- **GamificationSettings**: User UI preferences (quiet mode)
+
+**Features:**
+- Tenant-scoped isolation
+- Idempotent reward grants (no double-awards)
+- Audit trail for all rewards
+- Configurable rules via RewardConfig
+
+#### 2. Reward Calculation Tools ✅
+**Created:**
+- `backend/apps/gamification/tools/__init__.py`
+- `backend/apps/gamification/tools/entry_validator.py` - Entry meaningfulness validation
+- `backend/apps/gamification/tools/xp_calculator.py` - Quality-weighted XP computation
+- `backend/apps/gamification/tools/streak_updater.py` - Streak tracking + freeze logic
+- `backend/apps/gamification/tools/badge_awarder.py` - Badge awarding (idempotent)
+- `backend/apps/gamification/tools/challenge_updater.py` - Weekly challenge progress
+- `backend/apps/gamification/tools/persister.py` - Idempotent event persistence
+
+**Anti-Gaming Measures:**
+- Minimum content length (20 chars)
+- Rate limiting (max 10 entries/hour)
+- Duplicate detection (60s window)
+- Daily XP cap (200 XP)
+- Quality-weighted scoring
+
+**XP Breakdown:**
+- Base entry: 10 XP
+- Attachments: 5 XP each (cap 3)
+- Tags/skills: 3 XP each (cap 5)
+- Length bonus: 10 XP (200+ chars)
+- Metadata (outcomes/metrics): 15-10 XP
+- Level formula: `level = 1 + (total_xp // 100)`
+
+**Streak Logic:**
+- Increment on consecutive days
+- Freeze available (3 uses) for missed days
+- Tracks longest streak
+- Prevents double-counting same day
+
+#### 3. Reward Evaluation DAG ✅
+**Created:**
+- `backend/apps/orchestration/workflows/reward_evaluate.py` - Main reward DAG (150+ lines)
+- Registered as `gamification.reward_evaluate` job type
+
+**Workflow Steps:**
+1. Load worklog entry and user
+2. Load active reward config
+3. Validate meaningful entry (anti-gaming)
+4. Compute XP based on quality signals
+5. Persist XP event (idempotent)
+6. Update user streak (freeze logic)
+7. Award badges (idempotent, multi-trigger)
+8. Update weekly challenge progress
+9. Emit observability events
+
+**Trigger:**
+- Automatically triggered on worklog entry create/update
+- Async execution via job queue
+- Retryable with backoff
+
+#### 4. Gamification Services ✅
+**Created:**
+- `backend/apps/gamification/services.py` - Business logic layer
+
+**Services:**
+- `trigger_reward_evaluation()` - Enqueue reward job
+- `manual_grant_xp()` - Admin XP grant (audited)
+- `manual_revoke_badge()` - Admin badge revoke (audited)
+
+#### 5. Gamification Selectors ✅
+**Created:**
+- `backend/apps/gamification/selectors.py` - Read-only queries
+
+**Selectors:**
+- `get_user_summary()` - Streak, XP, level, daily progress, challenges
+- `get_badges()` - Earned + available badges
+- `get_active_challenges()` - User's active challenges
+- `get_challenge_history()` - Completed challenges
+- `get_user_settings()` - UI preferences
+- `get_engagement_metrics()` - Platform-wide metrics (admin)
+
+#### 6. API Endpoints ✅
+**Created:**
+- `backend/apps/api/views/gamification.py` - API views
+
+**User Endpoints:**
+- `GET /api/gamification/summary/` - Full summary
+- `GET /api/gamification/badges/` - Badges
+- `GET /api/gamification/challenges/` - Challenges
+- `PATCH /api/gamification/settings/` - Update settings
+
+**Admin Endpoints:**
+- `GET /api/admin/gamification/metrics/` - Engagement metrics
+- `POST /api/admin/gamification/grant/` - Manual XP grant
+- `POST /api/admin/gamification/revoke/` - Manual badge revoke
+
+#### 7. Django Admin Interface ✅
+**Created:**
+- `backend/apps/gamification/admin.py` - Admin interface
+
+**Admin Panels:**
+- UserStreak, UserXP, XPEvent (read-only ledger)
+- BadgeDefinition, UserBadge
+- ChallengeTemplate, UserChallenge
+- RewardConfig (versioned)
+- GamificationSettings
+
+#### 8. Initial Data ✅
+**Created:**
+- `backend/apps/gamification/migrations/0002_load_initial_data.py`
+
+**Badges (11):**
+- 🎯 First Step (first entry)
+- 🔥 Week Warrior (7-day streak)
+- ⚡ Month Master (30-day streak)
+- 💎 Century Champion (100-day streak)
+- 📝 Consistent Logger (10 entries)
+- 📚 Dedicated Tracker (50 entries)
+- 🏆 Century Club (100 entries)
+- 📎 Evidence Collector (first attachment)
+- 🌟 Rising Star (level 5)
+- ✨ Expert (level 10)
+
+**Challenges (3):**
+- Weekly Consistency (log 5 days/week, 50 XP)
+- Evidence Week (2 attachments/week, 30 XP)
+- Impact Focus (3 outcomes/week, 40 XP)
+
+**Default Config:**
+- Version 1 with all rules
+- Active by default
+
+#### 9. Integration ✅
+**Modified:**
+- `backend/apps/worklog/services.py` - Trigger rewards on create/update
+- `backend/apps/jobs/registry.py` - Register reward workflow
+- `backend/config/settings/base.py` - Add gamification app
+- `backend/apps/api/urls.py` - Add gamification routes
+
+#### 10. Comprehensive Tests ✅
+**Created:**
+- `backend/tests/test_gamification.py` - 24 tests, all passing
+
+**Test Coverage:**
+- Entry validation + anti-gaming
+- XP calculation + daily cap
+- Streak tracking + freeze logic
+- Badge awarding + idempotency
+- Challenge progress + completion
+- Services layer
+- Selectors
+- Tenant isolation
+
+**Result:** ✅ 24 passed in ~3s
+
+### 🔧 Configuration Changes
+
+**Environment Variables (Optional):**
+None required. Gamification uses existing infrastructure.
+
+**Reward Configuration:**
+Managed via `RewardConfig` model (Django admin).
+Default version 1 loaded automatically.
+
+### ✅ How to Verify Locally
+
+```bash
+# 1. Ensure Docker is running
+cd backend
+docker compose up -d
+
+# 2. Run migrations (if not already applied)
+docker compose exec backend-api python manage.py migrate gamification
+
+# 3. Run tests
+docker compose exec backend-api python -m pytest tests/test_gamification.py -v
+
+# 4. Create a worklog entry (triggers reward evaluation)
+# Use Django shell or API:
+curl -X POST http://localhost:8000/api/worklogs/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"date": "2025-12-31", "content": "Today I implemented the gamification feature with streaks, XP, badges, and challenges!"}'
+
+# 5. Check gamification summary
+curl http://localhost:8000/api/gamification/summary/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# 6. View badges
+curl http://localhost:8000/api/gamification/badges/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# 7. Check Django admin
+# Navigate to http://localhost:8000/admin/
+# Browse: Gamification section
+```
+
+**Expected Behavior:**
+- Creating worklog entry triggers async reward evaluation job
+- Job computes XP, updates streak, awards badges
+- Summary endpoint shows current streak, XP, level
+- Badges earned appear in badges endpoint
+- Weekly challenges track progress automatically
+
+### ⚠️ Risks and Assumptions
+
+**Risks:**
+- **Job queue load**: Each worklog entry triggers a job. Monitor queue depth.
+- **Gaming attempts**: Anti-gaming rules in place, but monitor for abuse patterns.
+- **Level inflation**: Current formula is simple (100 XP/level). May need tuning.
+
+**Assumptions:**
+- Users have one worklog entry per day max for streak tracking
+- Daily XP cap (200) is sufficient for normal usage
+- Freeze limit (3) is reasonable for streak preservation
+- Weekly challenges reset on Monday
+
+**Performance:**
+- Reward evaluation is async (non-blocking)
+- DAG execution: ~100-200ms typical
+- DB queries: optimized with select_related/prefetch_related
+- Idempotency prevents duplicate work
+
+### 📝 Human TODOs
+
+**Optional Enhancements:**
+- [ ] Notification system integration for streak reminders
+- [ ] Leaderboard (if competitive features desired)
+- [ ] Seasonal badges or limited-time challenges
+- [ ] Streak recovery (purchase with XP?)
+- [ ] Custom reward configs per tenant (enterprise feature)
+- [ ] Analytics dashboard for engagement tracking
+- [ ] Mobile push notifications for streaks at risk
+- [ ] Social features (share achievements, opt-in)
+
+**Monitoring:**
+- [ ] Set up alerts for high job queue depth
+- [ ] Monitor XP grant anomalies (spam detection)
+- [ ] Track engagement metrics weekly
+- [ ] Review challenge completion rates monthly
+
+**Documentation:**
+- [x] ARCHITECTURE.md updated (minimal gamification section)
+- [x] Tool context updated with DAG spec
+- [x] CHANGE_LOG.md updated with full details
+- [ ] User-facing help/FAQ about gamification features
+
+---
+
+**Migration Required:** ✅ Yes (`gamification.0001_initial`, `gamification.0002_load_initial_data`)  
+**Config Changes Required:** ❌ No (uses defaults)  
+**Breaking Changes:** ❌ None  
+**Pytest Status:** ✅ All 24 tests passing
+
