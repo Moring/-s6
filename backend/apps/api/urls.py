@@ -2,7 +2,7 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics
 
 urlpatterns = [
     # Health
@@ -28,6 +28,13 @@ urlpatterns = [
     
     # Admin - Audit
     path('admin/audit-events/', admin.list_audit_events, name='admin-audit-events'),
+    
+    # System Metrics (Admin only)
+    path('system/metrics/summary/', system_metrics.metrics_summary, name='system-metrics-summary'),
+    path('system/metrics/timeseries/', system_metrics.metrics_timeseries, name='system-metrics-timeseries'),
+    path('system/metrics/cohorts/', system_metrics.metrics_cohorts, name='system-metrics-cohorts'),
+    path('system/metrics/export.csv', system_metrics.metrics_export_csv, name='system-metrics-export-csv'),
+    path('system/metrics/config/', system_metrics.metrics_config, name='system-metrics-config'),
     
     # Artifacts (file uploads)
     path('artifacts/upload/', artifacts.upload_file, name='artifact-upload'),
