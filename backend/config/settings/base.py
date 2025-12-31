@@ -254,10 +254,7 @@ REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django.core.cache.backends.redis.client.DefaultClient',
-        },
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://valkey:6379/0'),
         'KEY_PREFIX': 'afterresume',
     }
 }
