@@ -16,6 +16,7 @@ urlpatterns = [
     path('auth/signup/', auth.signup, name='auth-signup'),
     path('auth/login/', auth.login_view, name='auth-login'),
     path('auth/logout/', auth.logout_view, name='auth-logout'),
+    path('auth/token/', auth.get_token, name='auth-token'),
     path('auth/password/change/', auth.password_change, name='auth-password-change'),
     path('auth/password/reset/', auth.password_reset_request, name='auth-password-reset'),
     path('me/', auth.me, name='auth-me'),

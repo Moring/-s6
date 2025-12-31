@@ -14,7 +14,7 @@ from decimal import Decimal
 def status_bar(request):
     """Return status bar HTML partial."""
     try:
-        client = get_backend_client()
+        client = get_backend_client(request)
         # Call backend status bar API
         status_data = client.get('/api/status/bar/')
         

@@ -13,24 +13,33 @@ logger = logging.getLogger(__name__)
 class BackendAPIClient:
     """Client for communicating with the backend API."""
     
-    def __init__(self):
+    def __init__(self, auth_token: Optional[str] = None):
         self.base_url = settings.BACKEND_BASE_URL
         self.timeout = 10
+        self.auth_token = auth_token
     
-    def _make_request(self, method: str, endpoint: str, auth=None, **kwargs) -> Optional[Dict[str, Any]]:
+    def _get_headers(self) -> Dict[str, str]:
+        """Get request headers including auth token if available."""
+        headers = {'Content-Type': 'application/json'}
+        if self.auth_token:
+            headers['Authorization'] = f'Token {self.auth_token}'
+        return headers
+    
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Dict[str, Any]]:
         """Make HTTP request to backend API."""
         url = f"{self.base_url}{endpoint}"
         
-        # Add session cookie for authentication if user is authenticated
-        if auth and hasattr(auth, 'is_authenticated') and auth.is_authenticated:
-            # In production, use proper session/token passing
-            # For now, assume shared session backend or token
-            pass
+        # Merge headers
+        headers = self._get_headers()
+        if 'headers' in kwargs:
+            headers.update(kwargs['headers'])
+            del kwargs['headers']
         
         try:
             response = requests.request(
                 method,
                 url,
+                headers=headers,
                 timeout=self.timeout,
                 **kwargs
             )
@@ -43,32 +52,54 @@ class BackendAPIClient:
             logger.error(f"Backend API error: {e}")
             return None
     
-    def get(self, endpoint: str, auth=None, **kwargs) -> Optional[Any]:
+    def get(self, endpoint: str, **kwargs) -> Optional[Any]:
         """GET request to backend."""
-        return self._make_request('GET', endpoint, auth=auth, **kwargs)
+        return self._make_request('GET', endpoint, **kwargs)
     
-    def post(self, endpoint: str, auth=None, **kwargs) -> Optional[Any]:
+    def post(self, endpoint: str, **kwargs) -> Optional[Any]:
         """POST request to backend."""
-        return self._make_request('POST', endpoint, auth=auth, **kwargs)
+        return self._make_request('POST', endpoint, **kwargs)
     
-    def upload_file(self, file, auth=None) -> Optional[Dict[str, Any]]:
+    def get_token(self, username: str, password: str) -> Optional[Dict[str, Any]]:
+        """
+        Get auth token from backend.
+        
+        Args:
+            username: User's username
+            password: User's password
+        
+        Returns:
+            Dict with 'token' and 'user' keys, or None on failure
+        """
+        return self.post('/api/auth/token/', json={
+            'username': username,
+            'password': password
+        })
+    
+    def upload_file(self, file, auth_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Upload a file to backend.
         
         Args:
             file: Django UploadedFile object
-            auth: User object for authentication
+            auth_token: Optional token override
         
         Returns:
             Response dict or None
         """
         url = f"{self.base_url}/api/artifacts/upload/"
         
+        token = auth_token or self.auth_token
+        headers = {}
+        if token:
+            headers['Authorization'] = f'Token {token}'
+        
         try:
             files = {'file': (file.name, file.read(), file.content_type)}
             response = requests.post(
                 url,
                 files=files,
+                headers=headers,
                 timeout=self.timeout
             )
             response.raise_for_status()
@@ -157,13 +188,15 @@ class BackendAPIClient:
         return self._make_request('POST', f'/api/worklogs/{worklog_id}/analyze/')
 
 
-# Singleton instance
-_client = None
-
-
-def get_backend_client() -> BackendAPIClient:
-    """Get or create backend API client instance."""
-    global _client
-    if _client is None:
-        _client = BackendAPIClient()
-    return _client
+def get_backend_client(request=None) -> BackendAPIClient:
+    """
+    Get or create backend API client instance.
+    
+    If request is provided and user is authenticated, will include auth token.
+    """
+    token = None
+    if request and hasattr(request, 'user') and request.user.is_authenticated:
+        # Get token from session
+        token = request.session.get('backend_token')
+    
+    return BackendAPIClient(auth_token=token)
