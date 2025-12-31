@@ -84,3 +84,28 @@ def get_job_events(job_id: str, level: Optional[str] = None):
         return qs
     except Job.DoesNotExist:
         return Event.objects.none()
+
+
+def emit_event(event_type: str, **data):
+    """
+    Emit a system event (non-job-specific).
+    For billing, audit, and other system-wide events.
+    
+    Args:
+        event_type: Type/category of event (e.g., 'billing.topup', 'auth.login')
+        **data: Event metadata
+    """
+    from apps.auditing.models import AuditEvent
+    
+    try:
+        # Create audit event
+        AuditEvent.objects.create(
+            event_type=event_type,
+            details=data,
+            level='info'
+        )
+        
+        # Also log to standard logging
+        logger.info(f"[{event_type}] {data}")
+    except Exception as e:
+        logger.error(f"Failed to emit event {event_type}: {e}")

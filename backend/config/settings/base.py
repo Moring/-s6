@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.storage',
     'apps.api',
     'apps.system',
+    'apps.billing',
 ]
 
 MIDDLEWARE = [
@@ -272,3 +273,8 @@ CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Rate Limiting Cache (uses Valkey/Redis)
+
+# Stripe configuration
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')

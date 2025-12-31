@@ -16,6 +16,7 @@ dependencies = [
     "minio>=7.2",
     "pillow>=10.0",
     "dj-database-url>=2.1",
+    "stripe>=7.0",
 ]
 
 [project.optional-dependencies]

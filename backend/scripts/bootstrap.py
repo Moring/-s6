@@ -74,6 +74,11 @@ def main():
         print(f"✗ Migrations failed: {exc}")
         raise
     
+    # Get admin credentials from environment (for display later)
+    admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
+    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    
     # Create superuser and profile using management command
     print(f"\nBootstrapping admin user...")
     try:
@@ -82,10 +87,6 @@ def main():
     except Exception as exc:
         print(f"✗ Admin bootstrap failed: {exc}")
         # Try legacy method as fallback
-        admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
-        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-        
         print(f"\nChecking for superuser: {admin_user}")
         user = None
         if not User.objects.filter(username=admin_user).exists():

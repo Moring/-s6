@@ -5,21 +5,8 @@ WORKDIR /app
 # Copy requirements
 COPY pyproject.toml /app/
 
-# Install dependencies
-RUN pip install --no-cache-dir \
-    django \
-    djangorestframework \
-    psycopg2-binary \
-    huey \
-    redis \
-    python-dotenv \
-    pydantic \
-    croniter \
-    requests \
-    django-allauth \
-    minio \
-    pillow \
-    dj-database-url
+# Install dependencies from pyproject.toml
+RUN pip install --no-cache-dir -e .
 
 # Copy application
 COPY . /app/

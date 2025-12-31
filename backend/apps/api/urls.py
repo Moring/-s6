@@ -2,7 +2,7 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing
 
 urlpatterns = [
     # Health
@@ -19,7 +19,7 @@ urlpatterns = [
     
     # Admin - Passkeys
     path('admin/passkeys/', admin.create_passkey, name='admin-passkey-create'),
-    path('admin/passkeys/', admin.list_passkeys, name='admin-passkey-list'),
+    path('admin/passkeys/list/', admin.list_passkeys, name='admin-passkey-list'),
     
     # Admin - Users
     path('admin/users/', admin.list_users, name='admin-user-list'),
@@ -58,4 +58,18 @@ urlpatterns = [
     # Jobs
     path('jobs/<uuid:job_id>/', jobs.job_detail, name='job-detail'),
     path('jobs/<uuid:job_id>/events/', jobs.job_events, name='job-events'),
+    
+    # Billing - User endpoints
+    path('billing/reserve/balance/', billing.reserve_balance, name='billing-reserve-balance'),
+    path('billing/reserve/ledger/', billing.reserve_ledger, name='billing-reserve-ledger'),
+    path('billing/topup/session/', billing.create_topup_session, name='billing-topup-session'),
+    path('billing/portal/session/', billing.create_portal_session, name='billing-portal-session'),
+    path('billing/profile/', billing.billing_profile, name='billing-profile'),
+    path('billing/webhook/', billing.stripe_webhook, name='billing-webhook'),
+    
+    # Billing - Admin endpoints
+    path('billing/admin/reserve/summary/', billing.admin_reserve_summary, name='billing-admin-reserve-summary'),
+    path('billing/admin/usage/costs/', billing.admin_usage_costs, name='billing-admin-usage-costs'),
+    path('billing/admin/reserve/adjust/', billing.admin_adjust_reserve, name='billing-admin-adjust-reserve'),
+    path('billing/admin/ledger/export.csv', billing.admin_export_ledger_csv, name='billing-admin-export-csv'),
 ]
