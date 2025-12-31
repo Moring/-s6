@@ -17,6 +17,7 @@ dependencies = [
     "pillow>=10.0",
     "dj-database-url>=2.1",
     "stripe>=7.0",
+    "django-ratelimit>=4.1",
 ]
 
 [project.optional-dependencies]

@@ -90,10 +90,19 @@ def status_bar(request):
 def reserve_balance(request):
     """Return reserve balance HTML partial."""
     try:
-        client = get_backend_client()
-        # TODO: Call backend API for reserve balance
-        balance = "—"
-    except Exception:
-        balance = "Error"
+        client = get_backend_client(request)
+        data = client.get('/api/billing/reserve/balance/')
+        balance_dollars = data.get('reserve_balance_dollars', 0)
+        is_low = data.get('is_low_balance', False)
+        
+        # Format with color coding
+        if is_low and balance_dollars <= 0:
+            html = f'<h1 class="display-4 mb-4 text-danger">${balance_dollars:.2f}</h1>'
+        elif is_low:
+            html = f'<h1 class="display-4 mb-4 text-warning">${balance_dollars:.2f}</h1>'
+        else:
+            html = f'<h1 class="display-4 mb-4 text-success">${balance_dollars:.2f}</h1>'
+    except Exception as e:
+        html = '<h1 class="display-4 mb-4 text-muted">—</h1>'
     
-    return HttpResponse(f'<span class="text-dark">{balance}</span>')
+    return HttpResponse(html)

@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.contrib.auth.models import User
+from django_ratelimit.decorators import ratelimit
 
 from apps.accounts import services as account_services
 from apps.accounts.serializers import UserSerializer
@@ -35,12 +36,14 @@ def get_user_agent(request):
     return request.META.get('HTTP_USER_AGENT', '')
 
 
+@ratelimit(key='ip', rate='5/m', method='POST')
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
 @permission_classes([AllowAny])
 def signup(request):
     """
     Create a new user account with invite passkey.
+    Rate limited to 5 requests per minute per IP.
     
     POST /api/auth/signup/
     Body: {username, email, password, passkey}
@@ -90,11 +93,13 @@ def signup(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@ratelimit(key='ip', rate='10/m', method='POST')
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
     """
     Authenticate user and create session.
+    Rate limited to 10 requests per minute per IP.
     
     POST /api/auth/login/
     Body: {username, password, remember_me}
@@ -167,12 +172,14 @@ def me(request):
     return Response(serializer.data)
 
 
+@ratelimit(key='ip', rate='10/m', method='POST')
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_token(request):
     """
     Get or create auth token for username/password.
     Used by frontend to obtain token for API calls.
+    Rate limited to 10 requests per minute per IP.
     
     POST /api/auth/token/
     Body: {username, password}
