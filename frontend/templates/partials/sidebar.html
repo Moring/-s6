@@ -98,6 +98,13 @@
                 </a>
             </li>
 
+            <li class="side-nav-item">
+                <a href="{% url 'gamification:achievements' %}" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-award"></i></span>
+                    <span class="menu-text">Achievements</span>
+                </a>
+            </li>
+
             {% if user.is_staff %}
             <li class="side-nav-title">Administration</li>
 

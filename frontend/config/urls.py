@@ -15,6 +15,7 @@ urlpatterns = [
     path('billing/', include('apps.billing.urls', namespace='billing')),
     path('admin-panel/', include('apps.admin_panel.urls', namespace='admin_panel')),
     path('system/', include('apps.system.urls', namespace='system')),
+    path('gamification/', include('apps.gamification.urls', namespace='gamification')),
     path('api-proxy/', include('apps.api_proxy.urls', namespace='api_proxy')),
     path('', include('apps.ui.urls', namespace='ui')),
 ]

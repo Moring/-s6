@@ -22,13 +22,26 @@ class WorkLogListCreateView(generics.ListCreateAPIView):
         return qs
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
+        instance = serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
+        
+        # Trigger gamification reward evaluation
+        if instance.user:
+            from apps.gamification import services as gamification_services
+            gamification_services.trigger_reward_evaluation(instance.id, instance.user.id)
 
 
 class WorkLogDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a work log."""
     queryset = WorkLog.objects.all()
     serializer_class = WorkLogSerializer
+    
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        
+        # Trigger gamification reward evaluation on update
+        if instance.user:
+            from apps.gamification import services as gamification_services
+            gamification_services.trigger_reward_evaluation(instance.id, instance.user.id)
 
 
 @rate_limit(AI_ACTION_RATE_LIMITER)

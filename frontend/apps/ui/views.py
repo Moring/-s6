@@ -24,10 +24,21 @@ def dashboard(request):
     health = get_backend_health()
     dashboard = get_dashboard_data()
     
+    # Get gamification summary
+    client = get_backend_client(request)
+    try:
+        gamification_summary = client.get('/api/gamification/summary/')
+        gamification_settings = client.get('/api/gamification/settings/')
+    except Exception:
+        gamification_summary = {}
+        gamification_settings = {'quiet_mode': False}
+    
     return render(request, 'ui/dashboard.html', {
         'health': health,
         'overview': dashboard.get('overview', {}) if dashboard else {},
-        'recent_jobs': dashboard.get('recent_jobs', []) if dashboard else []
+        'recent_jobs': dashboard.get('recent_jobs', []) if dashboard else [],
+        'gamification': gamification_summary,
+        'quiet_mode': gamification_settings.get('quiet_mode', False),
     })
 
 

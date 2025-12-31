@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'apps.billing',
     'apps.admin_panel',
     'apps.system',
+    'apps.gamification',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Achievements - AfterResume{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="page-title-box">
+            <div class="page-title-right">
+                <a href="{% url 'gamification:challenges' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="ti ti-target"></i> Challenges
+                </a>
+            </div>
+            <h4 class="page-title">Achievements & Badges</h4>
+        </div>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Stats Overview -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Streak</h5>
+                        <h3 class="my-2">{{ streak.current|default:0 }} days</h3>
+                        <p class="mb-0 text-muted">
+                            <i class="ti ti-flame text-primary me-1"></i> Best: {{ streak.longest|default:0 }} days
+                        </p>
+                    </div>
+                    <div class="avatar-lg">
+                        <span class="avatar-title bg-soft-primary text-primary rounded">
+                            <i class="ti ti-flame fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Level</h5>
+                        <h3 class="my-2">Level {{ xp.level|default:1 }}</h3>
+                        <p class="mb-0 text-muted">
+                            <i class="ti ti-star text-success me-1"></i> {{ xp.total|default:0 }} total XP
+                        </p>
+                    </div>
+                    <div class="avatar-lg">
+                        <span class="avatar-title bg-soft-success text-success rounded">
+                            <i class="ti ti-trophy fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="text-muted fw-normal mt-0">Badges</h5>
+                        <h3 class="my-2">{{ earned_count|default:0 }}/{{ total_count|default:0 }}</h3>
+                        <p class="mb-0 text-muted">
+                            <i class="ti ti-award text-info me-1"></i> Collected
+                        </p>
+                    </div>
+                    <div class="avatar-lg">
+                        <span class="avatar-title bg-soft-info text-info rounded">
+                            <i class="ti ti-award fs-xxl"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Earned Badges -->
+{% if badges %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="header-title mb-3">Your Badges</h4>
+                
+                <div class="row">
+                    {% for badge in badges %}
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="card border shadow-none">
+                            <div class="card-body text-center">
+                                <div class="avatar-lg mx-auto mb-2">
+                                    <span class="avatar-title bg-soft-primary text-primary rounded-circle fs-1">
+                                        {% if badge.icon %}
+                                            {{ badge.icon }}
+                                        {% else %}
+                                            <i class="ti ti-award"></i>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <h5 class="mb-1">{{ badge.name }}</h5>
+                                <p class="text-muted mb-2 small">{{ badge.description }}</p>
+                                <span class="badge bg-primary">{{ badge.category }}</span>
+                                <div class="mt-2">
+                                    <small class="text-muted">Earned {{ badge.awarded_at|date:"M d, Y" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="avatar-xl mx-auto mb-3">
+                    <span class="avatar-title bg-soft-primary text-primary rounded-circle">
+                        <i class="ti ti-award fs-xxl"></i>
+                    </span>
+                </div>
+                <h5>No badges earned yet</h5>
+                <p class="text-muted">Start logging your work to earn your first badge!</p>
+                <a href="{% url 'worklog:list' %}" class="btn btn-primary">
+                    <i class="ti ti-notebook me-1"></i> Go to Worklogs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Available Badges Preview -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="header-title mb-3">All Badges</h4>
+                
+                <div class="row">
+                    {% for badge in all_badges %}
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="card border shadow-none {% if not badge.earned %}opacity-50{% endif %}">
+                            <div class="card-body text-center">
+                                <div class="avatar-lg mx-auto mb-2">
+                                    <span class="avatar-title {% if badge.earned %}bg-soft-primary text-primary{% else %}bg-light text-muted{% endif %} rounded-circle fs-1">
+                                        {% if badge.icon %}
+                                            {{ badge.icon }}
+                                        {% else %}
+                                            <i class="ti ti-award"></i>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <h5 class="mb-1">{{ badge.name }}</h5>
+                                <p class="text-muted mb-2 small">{{ badge.description }}</p>
+                                <span class="badge {% if badge.earned %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {% if badge.earned %}Earned{% else %}Locked{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

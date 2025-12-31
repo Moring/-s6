@@ -69,6 +69,10 @@ def upload_attachment(request, worklog_id):
             size_bytes=file.size
         )
         
+        # Trigger gamification reward evaluation (attachment added)
+        from apps.gamification import services as gamification_services
+        gamification_services.trigger_reward_evaluation(worklog.id, worklog.user.id)
+        
         serializer = AttachmentSerializer(attachment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     

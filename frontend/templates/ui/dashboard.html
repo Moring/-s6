@@ -99,6 +99,11 @@
     </div>
 </div>
 
+<!-- Gamification Widget -->
+{% if not quiet_mode and gamification %}
+{% include "gamification/summary_widget.html" with streak=gamification.streak xp=gamification.xp active_challenges=gamification.active_challenges %}
+{% endif %}
+
 <div class="row">
     <div class="col-12">
         <div class="card">
