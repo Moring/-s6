@@ -57,7 +57,13 @@ class ReportAgent(BaseAgent):
         worklogs = list_worklogs(user=user, limit=50)
         
         return {
-            'worklogs': [{'date': wl.date, 'content': wl.content[:200]} for wl in worklogs]
+            'worklogs': [
+                {
+                    'date': str(wl.date),
+                    'content': wl.content[:200]
+                }
+                for wl in worklogs
+            ]
         }
     
     def _build_report_prompt(self, kind: str, data: dict) -> str:

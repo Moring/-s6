@@ -30,7 +30,7 @@ def compute_metrics(ctx, payload: dict) -> dict:
     from apps.invitations.models import InvitePasskey
     from apps.billing.models import ReserveAccount, ReserveLedgerEntry
     from apps.artifacts.models import Artifact
-    from apps.observability.models import AuthEvent
+    from apps.auditing.models import AuthEvent
     from django.contrib.auth.models import User
     
     tenant_id = payload.get('tenant_id')

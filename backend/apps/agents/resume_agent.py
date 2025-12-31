@@ -60,9 +60,25 @@ class ResumeAgent(BaseAgent):
         from apps.worklog.selectors import list_worklogs
         from apps.skills.selectors import list_skills
         
+        worklogs = list_worklogs(user=user, limit=100)
+        skills = list_skills(user=user)
+        
         return {
-            'worklogs': list_worklogs(user=user, limit=100),
-            'skills': list_skills(user=user),
+            'worklogs': [
+                {
+                    'date': str(wl.date),
+                    'content': wl.content[:200]
+                }
+                for wl in worklogs
+            ],
+            'skills': [
+                {
+                    'name': skill.name,
+                    'normalized': skill.normalized,
+                    'confidence': float(skill.confidence) if hasattr(skill, 'confidence') else 0.5
+                }
+                for skill in skills
+            ]
         }
     
     def _build_resume_prompt(self, data: dict) -> str:

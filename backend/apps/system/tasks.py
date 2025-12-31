@@ -1,31 +1,26 @@
 """
 Scheduled tasks for metrics computation.
 """
-from huey import cron
+from huey import crontab
 from huey.contrib.djhuey import db_task, db_periodic_task
 from datetime import timedelta, date
 from django.utils import timezone
 from apps.system.services import compute_daily_snapshot, compute_cohort_retention
 from apps.system.models import MetricsSnapshot
 from apps.tenants.models import Tenant
-from apps.observability.events import emit_event
+from apps.observability.services import log_event
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@db_periodic_task(cron(hour='1', minute='0'))
+@db_periodic_task(crontab(hour='1', minute='0'))
 def compute_daily_metrics():
     """
     Compute daily metrics snapshots for all tenants.
     Runs every day at 1 AM.
     """
     logger.info("Starting daily metrics computation")
-    
-    emit_event(
-        event_type='system.metrics.compute_start',
-        details={'task': 'daily_metrics'}
-    )
     
     try:
         yesterday = (timezone.now() - timedelta(days=1)).date()
@@ -52,39 +47,20 @@ def compute_daily_metrics():
             except Exception as e:
                 logger.error(f"Failed to compute snapshot for tenant {tenant.name}: {e}")
         
-        emit_event(
-            event_type='system.metrics.compute_success',
-            details={
-                'task': 'daily_metrics',
-                'date': str(yesterday),
-                'tenants_processed': tenants.count()
-            }
-        )
+        logger.info(f"Daily metrics computed successfully for {tenants.count()} tenants")
         
     except Exception as e:
         logger.error(f"Daily metrics computation failed: {e}", exc_info=True)
-        emit_event(
-            event_type='system.metrics.compute_failure',
-            details={
-                'task': 'daily_metrics',
-                'error': str(e)
-            }
-        )
         raise
 
 
-@db_periodic_task(cron(day='1', hour='2', minute='0'))
+@db_periodic_task(crontab(day='1', hour='2', minute='0'))
 def compute_monthly_cohorts():
     """
     Compute cohort retention analysis.
     Runs on the 1st of each month at 2 AM.
     """
     logger.info("Starting cohort retention computation")
-    
-    emit_event(
-        event_type='system.metrics.cohort_start',
-        details={'task': 'cohort_retention'}
-    )
     
     try:
         # Compute for last month
@@ -112,24 +88,10 @@ def compute_monthly_cohorts():
             except Exception as e:
                 logger.error(f"Failed to compute cohort for tenant {tenant.name}: {e}")
         
-        emit_event(
-            event_type='system.metrics.cohort_success',
-            details={
-                'task': 'cohort_retention',
-                'cohort_month': str(cohort_month),
-                'tenants_processed': tenants.count()
-            }
-        )
+        logger.info(f"Cohort retention computed successfully for {tenants.count()} tenants")
         
     except Exception as e:
         logger.error(f"Cohort computation failed: {e}", exc_info=True)
-        emit_event(
-            event_type='system.metrics.cohort_failure',
-            details={
-                'task': 'cohort_retention',
-                'error': str(e)
-            }
-        )
         raise
 
 
