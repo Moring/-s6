@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Jobs - AfterResume{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>All Jobs</h2>
+    
+    <div style="margin-bottom: 15px;">
+        <strong>Filter:</strong>
+        <a href="/jobs/" class="btn" style="font-size: 12px; padding: 4px 8px;">All</a>
+        <a href="/jobs/?status=queued" class="btn" style="font-size: 12px; padding: 4px 8px;">Queued</a>
+        <a href="/jobs/?status=running" class="btn" style="font-size: 12px; padding: 4px 8px;">Running</a>
+        <a href="/jobs/?status=success" class="btn" style="font-size: 12px; padding: 4px 8px;">Success</a>
+        <a href="/jobs/?status=failed" class="btn" style="font-size: 12px; padding: 4px 8px;">Failed</a>
+    </div>
+    
+    {% if jobs %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Trigger</th>
+                <th>Retry</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td><a href="/jobs/{{ job.id }}/">{{ job.id|truncatechars:12 }}</a></td>
+                <td><code>{{ job.type }}</code></td>
+                <td><span class="status {{ job.status }}">{{ job.status }}</span></td>
+                <td>{{ job.trigger }}</td>
+                <td>{{ job.retry_count }}</td>
+                <td>{{ job.created_at|slice:":19" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No jobs found.</p>
+    {% endif %}
+</div>
+{% endblock %}

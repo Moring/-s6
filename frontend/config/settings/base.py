@@ -1,19 +1,16 @@
 """
-Base Django settings for AfterResume backend.
+Base Django settings for AfterResume frontend.
 """
 import os
 from pathlib import Path
-from dotenv import load_dotenv
-
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-frontend-dev-key')
 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = os.environ.get('DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -23,22 +20,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'huey.contrib.djhuey',
-    # Domain apps
-    'apps.worklog',
-    'apps.skills',
-    'apps.reporting',
-    'apps.jobs',
-    'apps.observability',
-    # Infrastructure apps
-    'apps.workers',
-    'apps.orchestration',
-    'apps.agents',
-    'apps.llm',
-    'apps.storage',
-    'apps.api',
-    'apps.system',
+    # Third party
+    'django_htmx',
+    # Local apps
+    'apps.ui',
+    'apps.api_proxy',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +35,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -56,7 +43,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -71,7 +58,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
+# Database (optional for frontend, use SQLite for sessions)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -95,36 +82,30 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50,
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+# Valkey/Redis cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f"redis://{os.environ.get('VALKEY_HOST', 'localhost')}:{os.environ.get('VALKEY_PORT', '6379')}/0",
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
 }
 
-# Huey configuration
-HUEY = {
-    'huey_class': 'huey.RedisHuey',
-    'name': 'afterresume',
-    'url': os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
-    'immediate': False,  # Process tasks asynchronously
-    'consumer': {
-        'workers': int(os.environ.get('HUEY_WORKERS', '4')),
-        'worker_type': 'thread',
-    },
-}
+# Session engine
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+# Backend API configuration
+BACKEND_BASE_URL = os.environ.get('BACKEND_BASE_URL', 'http://localhost:8000')
 
 # Logging
 LOGGING = {
@@ -133,10 +114,6 @@ LOGGING = {
     'formatters': {
         'verbose': {
             'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
             'style': '{',
         },
     },
@@ -163,18 +140,3 @@ LOGGING = {
         },
     },
 }
-
-# MinIO configuration
-MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'localhost:9000')
-MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
-MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
-MINIO_SECURE = os.environ.get('MINIO_SECURE', 'False') == 'True'
-MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'afterresume')
-
-# LLM configuration
-LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'local')
-LLM_VLLM_ENDPOINT = os.environ.get('LLM_VLLM_ENDPOINT', 'http://localhost:8000')
-LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4')
-
-# System dashboard
-SYSTEM_DASHBOARD_ENABLED = os.environ.get('SYSTEM_DASHBOARD_ENABLED', 'True') == 'True'

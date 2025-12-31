@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AfterResume{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>System Status</h2>
+    <p>
+        Backend: 
+        {% if health.status == 'ok' %}
+            <span class="status ok">{{ health.status }}</span>
+        {% else %}
+            <span class="status error">{{ health.status|default:'error' }}</span>
+            {% if health.error %}
+                <br><small>{{ health.error }}</small>
+            {% endif %}
+        {% endif %}
+    </p>
+</div>
+
+{% if overview %}
+<div class="card">
+    <h2>System Overview</h2>
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-label">Total Jobs</div>
+            <div class="stat-value">{{ overview.jobs.total|default:0 }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Queued</div>
+            <div class="stat-value">{{ overview.jobs.queued|default:0 }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Running</div>
+            <div class="stat-value">{{ overview.jobs.running|default:0 }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Success</div>
+            <div class="stat-value">{{ overview.jobs.success|default:0 }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value">{{ overview.jobs.failed|default:0 }}</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Schedules</div>
+            <div class="stat-value">{{ overview.schedules.enabled|default:0 }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if recent_jobs %}
+<div class="card">
+    <h2>Recent Jobs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Trigger</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in recent_jobs %}
+            <tr>
+                <td><a href="/jobs/{{ job.id }}/">{{ job.id|truncatechars:12 }}</a></td>
+                <td><code>{{ job.type }}</code></td>
+                <td><span class="status {{ job.status }}">{{ job.status }}</span></td>
+                <td>{{ job.trigger }}</td>
+                <td>{{ job.created_at|slice:":19" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p style="margin-top: 15px;">
+        <a href="/jobs/" class="btn">View All Jobs →</a>
+    </p>
+</div>
+{% endif %}
+
+{% if not overview and health.status != 'ok' %}
+<div class="alert alert-error">
+    <strong>Backend Unavailable</strong><br>
+    The backend service is not responding. Please check that the backend is running.
+</div>
+{% endif %}
+{% endblock %}

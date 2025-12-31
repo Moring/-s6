@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Health Check - AfterResume{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Frontend Health</h2>
+    <p>Status: <span class="status ok">{{ frontend_status }}</span></p>
+</div>
+
+<div class="card">
+    <h2>Backend Health</h2>
+    <p>
+        Status: 
+        {% if backend.status == 'ok' %}
+            <span class="status ok">{{ backend.status }}</span>
+        {% else %}
+            <span class="status error">{{ backend.status|default:'error' }}</span>
+        {% endif %}
+    </p>
+    {% if backend.error %}
+        <p><strong>Error:</strong> {{ backend.error }}</p>
+    {% endif %}
+</div>
+{% endblock %}

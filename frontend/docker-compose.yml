@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    container_name: afterresume-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - DEBUG=${DEBUG:-1}
+      - SECRET_KEY=${SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
+      - VALKEY_HOST=${VALKEY_HOST}
+      - VALKEY_PORT=${VALKEY_PORT}
+    volumes:
+      - .:/app
+      - frontend_static:/app/staticfiles
+    depends_on:
+      - valkey
+    networks:
+      - afterresume-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/health/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: afterresume-valkey-frontend
+    ports:
+      - "6380:6379"
+    volumes:
+      - valkey_data:/data
+    networks:
+      - afterresume-net
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  frontend_static:
+  valkey_data:
+
+networks:
+  afterresume-net:
+    external: true
+    name: afterresume-net

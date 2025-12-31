@@ -1,0 +1,183 @@
+version: '3'
+
+env:
+  ENV_FILE: .env
+
+dotenv: ['.env']
+
+tasks:
+  # === Main Tasks ===
+  
+  up:
+    desc: Start all services (backend + frontend)
+    cmds:
+      - task: network
+      - docker compose -f backend/docker-compose.yml --env-file .env up -d
+      - docker compose -f frontend/docker-compose.yml --env-file .env up -d
+      - task: wait-for-backend
+      - task: status
+
+  down:
+    desc: Stop all services
+    cmds:
+      - docker compose -f frontend/docker-compose.yml down
+      - docker compose -f backend/docker-compose.yml down
+
+  restart:
+    desc: Restart all services
+    cmds:
+      - task: down
+      - task: up
+
+  reset:
+    desc: Reset everything (stop, remove volumes, start)
+    cmds:
+      - task: down
+      - docker compose -f frontend/docker-compose.yml down -v
+      - docker compose -f backend/docker-compose.yml down -v
+      - docker network rm afterresume-net || true
+      - task: up
+
+  # === Logs ===
+  
+  logs:
+    desc: Tail all service logs
+    cmds:
+      - docker compose -f backend/docker-compose.yml logs -f
+
+  logs-frontend:
+    desc: Tail frontend logs
+    cmds:
+      - docker compose -f frontend/docker-compose.yml logs -f
+
+  logs-backend:
+    desc: Tail backend logs
+    cmds:
+      - docker compose -f backend/docker-compose.yml logs -f backend-api
+
+  logs-worker:
+    desc: Tail worker logs
+    cmds:
+      - docker compose -f backend/docker-compose.yml logs -f backend-worker
+
+  # === Database ===
+  
+  migrate:
+    desc: Run database migrations
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api python manage.py migrate
+
+  makemigrations:
+    desc: Create new migrations
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api python manage.py makemigrations
+
+  dbshell:
+    desc: Open database shell
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec postgres psql -U afterresume -d afterresume
+
+  # === Shell Access ===
+  
+  shell-backend:
+    desc: Open Django shell (backend)
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api python manage.py shell
+
+  shell-frontend:
+    desc: Open Django shell (frontend)
+    cmds:
+      - docker compose -f frontend/docker-compose.yml exec frontend python manage.py shell
+
+  bash-backend:
+    desc: Open bash in backend container
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api bash
+
+  bash-frontend:
+    desc: Open bash in frontend container
+    cmds:
+      - docker compose -f frontend/docker-compose.yml exec frontend bash
+
+  # === Status & Health ===
+  
+  status:
+    desc: Show status of all services
+    cmds:
+      - echo "=== Backend Services ==="
+      - docker compose -f backend/docker-compose.yml ps
+      - echo ""
+      - echo "=== Frontend Services ==="
+      - docker compose -f frontend/docker-compose.yml ps
+
+  health:
+    desc: Check health of all services
+    cmds:
+      - echo "=== Checking Backend Health ==="
+      - curl -s http://localhost:8000/api/healthz/ | jq . || echo "Backend not responding"
+      - echo ""
+      - echo "=== Checking Frontend Health ==="
+      - curl -s http://localhost:3000/health/ || echo "Frontend not responding"
+
+  # === Development ===
+  
+  seed:
+    desc: Seed demo data
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api python scripts/seed_demo_data.py
+
+  create-admin:
+    desc: Create admin user
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api python scripts/create_admin.py
+
+  bootstrap:
+    desc: Bootstrap the system (migrate + seed)
+    cmds:
+      - task: migrate
+      - task: seed
+      - echo "Bootstrap complete! Frontend: http://localhost:3000"
+
+  # === Testing ===
+  
+  test-backend:
+    desc: Run backend tests
+    cmds:
+      - docker compose -f backend/docker-compose.yml exec backend-api pytest --create-db
+
+  test-frontend:
+    desc: Run frontend tests
+    cmds:
+      - docker compose -f frontend/docker-compose.yml exec frontend pytest
+
+  # === Utility ===
+  
+  network:
+    desc: Create Docker network
+    cmds:
+      - docker network create afterresume-net || true
+    silent: true
+
+  wait-for-backend:
+    desc: Wait for backend to be healthy
+    cmds:
+      - |
+        echo "Waiting for backend to be healthy..."
+        for i in {1..30}; do
+          if curl -s http://localhost:8000/api/healthz/ > /dev/null 2>&1; then
+            echo "Backend is healthy!"
+            break
+          fi
+          echo "Attempt $i/30: Backend not ready yet..."
+          sleep 2
+        done
+
+  clean:
+    desc: Clean up Docker resources
+    cmds:
+      - docker system prune -f
+
+  ps:
+    desc: Show all running containers
+    cmds:
+      - docker ps --filter "name=afterresume"
