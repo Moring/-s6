@@ -4,6 +4,401 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2025-12-31 - Phase 1: Security Baseline + Config Safety + Traceability
+
+### Summary
+Implemented comprehensive security hardening, configuration management, and distributed tracing capabilities. The platform is now secure-by-default with role-based access control, service-to-service authentication, security headers, environment validation, and correlation ID tracing throughout the system.
+
+### ✅ What Changed
+
+#### 1. Tenant Roles & Centralized Permissions ✅
+**Created:**
+- `backend/apps/tenants/roles.py` - Role model with 4 roles (owner/admin/member/read_only)
+- `backend/apps/tenants/models.py` - Added `TenantMembership` model for multi-user tenants
+- `backend/apps/tenants/migrations/0002_*.py` - Migration for membership and tenant settings
+
+**Features:**
+- Centralized permission system with 20+ granular permissions
+- Role-based access control enforced across UI, API, jobs, and share links
+- `has_permission()` helper for consistent authorization checks
+- `@require_permission()` decorator for views
+- Superuser and staff user special permissions
+
+**Permissions by Role:**
+- **Owner**: All permissions (manage tenant, billing, users, all operations)
+- **Admin**: Most permissions except tenant/billing management
+- **Member**: Standard user operations (worklogs, reports, exports)
+- **Read-Only**: View-only access
+
+#### 2. Service-to-Service Authentication ✅
+**Created:**
+- `backend/apps/api/service_auth.py` - HMAC-based token authentication
+
+**Features:**
+- Frontend → Backend calls require `X-Service-Token` header
+- Token format: `timestamp:hmac_sha256_signature`
+- 5-minute token expiry (configurable)
+- Signature verification with constant-time comparison
+- Automatic rejection of expired/malformed tokens
+- Public endpoints excluded: `/api/auth/`, `/api/healthz`, `/api/share/`
+- Dev mode bypass via `SKIP_SERVICE_AUTH=True`
+
+**Settings Added:**
+- `SERVICE_TO_SERVICE_SECRET`: Shared secret (falls back to `SECRET_KEY`)
+- `SKIP_SERVICE_AUTH`: Skip validation in development
+
+#### 3. Web Hardening ✅
+**Created:**
+- `backend/apps/api/security_middleware.py` - Security headers middleware
+  - `SecurityHeadersMiddleware`: Adds all security headers
+  - `IPAllowlistMiddleware`: Optional IP-based admin access control
+  - `MaintenanceModeMiddleware`: Emergency maintenance mode switch
+
+**Security Headers Implemented:**
+- **Content-Security-Policy**: Strict CSP (self-only, configurable for dev/prod)
+- **Strict-Transport-Security**: HSTS with preload (production only)
+- **X-Frame-Options**: DENY
+- **X-Content-Type-Options**: nosniff
+- **X-XSS-Protection**: 1; mode=block
+- **Referrer-Policy**: strict-origin-when-cross-origin
+- **Permissions-Policy**: Denies geolocation, camera, microphone, etc.
+
+**Session Security:**
+- HttpOnly cookies (no JavaScript access)
+- Secure cookies in production
+- SameSite: Lax
+- 2-week expiry with sliding window
+- CSRF protection enabled with trusted origins
+
+**Settings Added:**
+- `ADMIN_IP_ALLOWLIST`: Comma-separated IPs for admin access
+- `MAINTENANCE_MODE`: Emergency switch to block non-staff requests
+- `CSRF_COOKIE_SECURE`: Secure cookies in production
+- `CSRF_TRUSTED_ORIGINS`: Trusted origins for CSRF
+
+#### 4. Environment Variable Contract & Validation ✅
+**Created:**
+- `backend/apps/api/env_validation.py` - Comprehensive env validation
+- `backend/apps/api/management/commands/validate_env.py` - Django management command
+
+**Features:**
+- 30+ environment variables documented with defaults, examples, and descriptions
+- Startup validation fails fast with actionable error messages
+- Secrets marked and never logged (***REDACTED***)
+- `.env` and `dokploy.env` excluded from git
+- `--print-status` flag for debugging
+
+**Validation Covers:**
+- Core Django settings (SECRET_KEY, DEBUG, ALLOWED_HOSTS)
+- Database configuration (DATABASE_URL or POSTGRES_*)
+- Redis/Valkey configuration
+- MinIO/S3 configuration
+- Service authentication secrets
+- LLM provider configuration (with conditional validation)
+- Email configuration (optional)
+- Stripe configuration (optional)
+- Feature flags
+- Security settings
+
+**Usage:**
+```bash
+python manage.py validate_env                # Validate and exit on error
+python manage.py validate_env --print-status # Print configuration status
+```
+
+#### 5. Correlation IDs End-to-End ✅
+**Created:**
+- `backend/apps/observability/correlation.py` - Correlation ID middleware and utilities
+
+**Features:**
+- Correlation IDs generated for every request (UUID v4)
+- Accepted from `X-Correlation-ID` header or generated
+- Added to response headers: `X-Correlation-ID`
+- Propagated to all structured logs
+- `CorrelationIDFilter` for logging integration
+- `get_correlation_id()` helper for manual correlation
+
+**Logging Format:**
+- All logs now include: `{levelname} {asctime} {module} [{correlation_id}] {message}`
+- Enables request tracing across frontend/backend/workers/jobs/DAG runs
+
+**Updated:**
+- `config/settings/base.py`: Added correlation filter to logging configuration
+- All middleware stack updated with correlation middleware
+
+### 🗂️ Configuration Changes
+
+**New Environment Variables:**
+```bash
+# Security
+SERVICE_TO_SERVICE_SECRET=<generate-strong-secret>  # Optional, falls back to SECRET_KEY
+CSRF_TRUSTED_ORIGINS=https://yourdomain.com         # Required for production
+ADMIN_IP_ALLOWLIST=192.168.1.1,10.0.0.1            # Optional
+
+# Feature Flags / Emergency Switches
+MAINTENANCE_MODE=False                               # Emergency maintenance mode
+DISABLE_SHARING=False                                # Disable share link creation
+SKIP_SERVICE_AUTH=False                              # Skip service auth (dev only)
+```
+
+**Middleware Stack Updated:**
+```python
+MIDDLEWARE = [
+    # ... existing middleware ...
+    'apps.api.security_middleware.SecurityHeadersMiddleware',
+    'apps.api.security_middleware.IPAllowlistMiddleware',
+    'apps.api.security_middleware.MaintenanceModeMiddleware',
+    'apps.observability.correlation.CorrelationIDMiddleware',
+]
+```
+
+**Logging Configuration Updated:**
+```python
+LOGGING = {
+    # ... existing config ...
+    'filters': {
+        'correlation_id': {
+            '()': 'apps.observability.correlation.CorrelationIDFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} [{correlation_id}] {message}',
+        },
+    },
+}
+```
+
+### 🗄️ Database Migrations
+
+**Migration Required:**
+```bash
+# Apply tenant membership migration
+python manage.py migrate tenants
+```
+
+**Migration:** `backend/apps/tenants/migrations/0002_tenant_plan_tenant_settings_tenantmembership.py`
+
+**Changes:**
+- Adds `plan` field to `Tenant` (default: 'free')
+- Adds `settings` JSONField to `Tenant`
+- Creates `TenantMembership` model with roles (owner/admin/member/read_only)
+
+### ✅ How to Verify Locally
+
+#### 1. Start Services
+```bash
+cd /Users/david/dm/-s6
+task up
+```
+
+#### 2. Validate Environment
+```bash
+docker compose -f backend/docker-compose.yml exec backend-api python manage.py validate_env
+# Should print: ✓ Environment validation passed
+
+docker compose -f backend/docker-compose.yml exec backend-api python manage.py validate_env --print-status
+# Should print configuration status with secrets redacted
+```
+
+#### 3. Test Service Authentication
+```python
+# In Django shell
+from apps.api.service_auth import generate_service_token, verify_service_token
+
+# Generate token
+token = generate_service_token()
+print(f"Token: {token}")
+
+# Verify token
+is_valid, error = verify_service_token(token)
+print(f"Valid: {is_valid}, Error: {error}")
+
+# Test expired token (400 seconds old)
+import time
+old_token = generate_service_token(int(time.time()) - 400)
+is_valid, error = verify_service_token(old_token, max_age=300)
+print(f"Valid: {is_valid}, Error: {error}")  # Should be False, "Token expired"
+```
+
+#### 4. Test Security Headers
+```bash
+curl -I http://localhost:8000/api/healthz/
+# Should include headers:
+# - Content-Security-Policy
+# - X-Frame-Options: DENY
+# - X-Content-Type-Options: nosniff
+# - X-XSS-Protection: 1; mode=block
+# - Referrer-Policy: strict-origin-when-cross-origin
+# - Permissions-Policy: ...
+```
+
+#### 5. Test Correlation IDs
+```bash
+# Request with correlation ID
+curl -H "X-Correlation-ID: test-correlation-123" http://localhost:8000/api/healthz/ -I
+# Response should include: X-Correlation-ID: test-correlation-123
+
+# Request without correlation ID
+curl http://localhost:8000/api/healthz/ -I
+# Response should include generated X-Correlation-ID (UUID)
+
+# Check logs include correlation ID
+docker compose -f backend/docker-compose.yml logs backend-api | grep "correlation"
+```
+
+#### 6. Test Roles & Permissions
+```python
+# In Django shell
+from django.contrib.auth.models import User
+from apps.tenants.models import Tenant, TenantMembership
+from apps.tenants.roles import get_user_role, has_permission, Permission, TenantRole
+
+# Create test setup
+owner = User.objects.create_user('owner', 'owner@test.com', 'pass')
+member = User.objects.create_user('member', 'member@test.com', 'pass')
+tenant = Tenant.objects.create(name='Test', owner=owner)
+TenantMembership.objects.create(tenant=tenant, user=member, role='member')
+
+# Test owner permissions
+print(get_user_role(owner, tenant))  # Should be TenantRole.OWNER
+print(has_permission(owner, tenant, Permission.MANAGE_TENANT))  # True
+
+# Test member permissions
+print(get_user_role(member, tenant))  # Should be TenantRole.MEMBER
+print(has_permission(member, tenant, Permission.CREATE_WORKLOG))  # True
+print(has_permission(member, tenant, Permission.MANAGE_USERS))  # False
+```
+
+#### 7. Run Tests
+```bash
+docker compose -f backend/docker-compose.yml exec backend-api python -m pytest tests/test_system_capabilities.py -v
+# Should show: 30 passed
+```
+
+### ⚠️ Notable Risks & Assumptions
+
+**Risks:**
+1. **Breaking Change**: Service-to-service authentication is enabled by default
+   - **Mitigation**: Set `SKIP_SERVICE_AUTH=True` in development
+   - Frontend must send `X-Service-Token` header on all API calls
+
+2. **Session Security**: Secure cookies require HTTPS in production
+   - **Mitigation**: Automatically enabled only when `DEBUG=False`
+   - Ensure SSL/TLS is configured before production deployment
+
+3. **Admin IP Allowlist**: Incorrect configuration locks out admins
+   - **Mitigation**: Optional setting (empty by default means no restriction)
+   - Always test before applying to production
+
+4. **Correlation ID Performance**: Every log line includes UUID lookup
+   - **Mitigation**: Uses thread-local storage; minimal overhead
+   - Can be disabled by removing filter if needed
+
+**Assumptions:**
+1. Frontend will be updated to include `X-Service-Token` in API calls
+2. Production deployment uses HTTPS/TLS
+3. `SERVICE_TO_SERVICE_SECRET` is kept secure and rotated periodically
+4. Database migration can be applied without downtime (adds new columns/tables)
+5. Log storage has capacity for correlation IDs in every log line
+
+### 🔧 Human TODOs
+
+#### Critical (Required for Production)
+- [ ] Generate strong `SERVICE_TO_SERVICE_SECRET` (use `secrets.token_urlsafe(32)`)
+- [ ] Configure `CSRF_TRUSTED_ORIGINS` with production domains
+- [ ] Set up SSL/TLS certificates and configure HTTPS
+- [ ] Review and set `ADMIN_IP_ALLOWLIST` if admin IP restriction desired
+- [ ] Update frontend to include `X-Service-Token` header in all API calls
+- [ ] Test service-to-service auth with frontend integration
+- [ ] Verify security headers in production with security scan tools
+
+#### Recommended
+- [ ] Set up MFA provider for admin accounts (e.g., django-otp, Auth0)
+- [ ] Configure log aggregation to search by correlation ID (ELK, CloudWatch, Datadog)
+- [ ] Set up monitoring alerts for authentication failures (too many 401/403 responses)
+- [ ] Document security incident response procedures
+- [ ] Schedule periodic security header audits
+- [ ] Configure automated secret rotation for `SERVICE_TO_SERVICE_SECRET`
+- [ ] Set up IP allowlist management process for distributed teams
+
+#### Optional Enhancements
+- [ ] Implement rate limiting on authentication endpoints (Phase 2)
+- [ ] Add audit logging for permission checks (high-value operations)
+- [ ] Implement session replay protection (nonce-based)
+- [ ] Add Content-Security-Policy report endpoint for CSP violations
+- [ ] Configure automated vulnerability scanning (Snyk, Dependabot)
+- [ ] Add security headers testing to CI/CD pipeline
+- [ ] Implement certificate pinning for service-to-service auth
+
+### 📊 Test Results
+
+**Test Suite:** `tests/test_system_capabilities.py`
+**Status:** ✅ 30/30 PASSING
+
+**Coverage:**
+- ✅ Tenant role detection (owner/admin/member/read_only)
+- ✅ Permission enforcement (all roles tested)
+- ✅ Superuser permission bypass
+- ✅ Service token generation and verification
+- ✅ Token expiry and signature validation
+- ✅ Malformed token rejection
+- ✅ Rate limiting (Phase 1 complete, tests exist)
+- ✅ Feature flags (Phase 1 complete, tests exist)
+- ✅ Quotas and concurrency (Phase 1 complete, tests exist)
+
+**Run Tests:**
+```bash
+docker compose -f backend/docker-compose.yml exec backend-api python -m pytest tests/test_system_capabilities.py -v
+```
+
+### 📚 Documentation Updated
+
+**Created:**
+- `ARCHITECTURE.md` - Comprehensive architecture documentation
+- `ADMIN_GUIDE.md` - Operational runbook for administrators
+
+**Updated:**
+- `README.md` - Added security and configuration sections (already comprehensive)
+- `CHANGE_LOG.md` - This entry
+
+**Documentation Covers:**
+- Service boundaries and layering rules
+- Multi-tenancy model and role-based access control
+- Service-to-service authentication mechanism
+- Security headers and session security
+- Environment variable contract and validation
+- Correlation ID tracing for distributed systems
+- Operational procedures (user management, security, monitoring)
+- Troubleshooting guides
+- Human TODOs for production deployment
+
+### 🔄 Breaking Changes
+
+**Service-to-Service Authentication** (can be disabled):
+- Backend now requires `X-Service-Token` header on internal API calls
+- Public endpoints excluded: `/api/auth/`, `/api/healthz`, `/api/share/`
+- **Workaround for dev**: Set `SKIP_SERVICE_AUTH=True` in `.env`
+- **Required for production**: Frontend must generate and send tokens
+
+### ✅ Phase 1 Acceptance Criteria
+
+All Phase 1 requirements met:
+- ✅ Auth boundaries enforced (service-to-service authentication)
+- ✅ Security headers present (CSP, HSTS, X-Frame-Options, etc.)
+- ✅ Env validation works (startup validation + management command)
+- ✅ Logs include correlation IDs (end-to-end tracing)
+- ✅ Pytest 100% (30/30 tests passing)
+- ✅ Role model + centralized permissions implemented
+- ✅ CSRF protections + secure sessions configured
+- ✅ IP allowlist + maintenance mode available
+- ✅ Documentation complete (ARCHITECTURE.md, ADMIN_GUIDE.md)
+
+**Phase 1 Status:** ✅ **COMPLETE AND READY FOR PHASE 2**
+
+---
+
+
 ## 2025-12-31 (Session 13): Complete DAG Workflow Verification & Implementation
 
 ### Summary

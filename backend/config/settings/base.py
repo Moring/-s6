@@ -64,6 +64,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'apps.tenants.middleware.TenantMiddleware',
+    # Security and observability
+    'apps.api.security_middleware.SecurityHeadersMiddleware',
+    'apps.api.security_middleware.IPAllowlistMiddleware',
+    'apps.api.security_middleware.MaintenanceModeMiddleware',
+    'apps.observability.correlation.CorrelationIDMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -171,9 +176,14 @@ HUEY = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'correlation_id': {
+            '()': 'apps.observability.correlation.CorrelationIDFilter',
+        },
+    },
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
+            'format': '{levelname} {asctime} {module} [{correlation_id}] {message}',
             'style': '{',
         },
         'simple': {
@@ -185,6 +195,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['correlation_id'],
         },
     },
     'root': {
@@ -204,6 +215,25 @@ LOGGING = {
         },
     },
 }
+
+# Security settings
+# Service-to-service authentication
+SERVICE_TO_SERVICE_SECRET = os.environ.get('SERVICE_TO_SERVICE_SECRET', SECRET_KEY)
+SKIP_SERVICE_AUTH = os.environ.get('SKIP_SERVICE_AUTH', 'False') == 'True'
+
+# Feature flags
+MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE', 'False') == 'True'
+DISABLE_SHARING = os.environ.get('DISABLE_SHARING', 'False') == 'True'
+
+# Admin IP allowlist (comma-separated)
+admin_ips = os.environ.get('ADMIN_IP_ALLOWLIST', '')
+ADMIN_IP_ALLOWLIST = [ip.strip() for ip in admin_ips.split(',') if ip.strip()]
+
+# CSRF settings
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
 
 # MinIO configuration
 MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'localhost:9000')
