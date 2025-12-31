@@ -99,6 +99,36 @@
             </li>
 
             {% if user.is_staff %}
+            <li class="side-nav-title">Administration</li>
+
+            <li class="side-nav-item">
+                <a href="{% url 'admin_panel:passkeys' %}" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-key"></i></span>
+                    <span class="menu-text">Passkey Management</span>
+                </a>
+            </li>
+
+            <li class="side-nav-item">
+                <a href="{% url 'admin_panel:users' %}" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-users"></i></span>
+                    <span class="menu-text">User Management</span>
+                </a>
+            </li>
+
+            <li class="side-nav-item">
+                <a href="{% url 'admin_panel:billing_admin' %}" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-wallet"></i></span>
+                    <span class="menu-text">Billing Admin</span>
+                </a>
+            </li>
+
+            <li class="side-nav-item">
+                <a href="{% url 'admin_panel:metrics_dashboard' %}" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-chart-line"></i></span>
+                    <span class="menu-text">Executive Metrics</span>
+                </a>
+            </li>
+
             <li class="side-nav-title">System</li>
 
             <li class="side-nav-item">

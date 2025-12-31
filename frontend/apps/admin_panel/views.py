@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
+from django.utils import timezone
 from apps.api_proxy.client import get_backend_client
 
 
@@ -12,9 +13,32 @@ from apps.api_proxy.client import get_backend_client
 @require_http_methods(["GET"])
 def metrics_dashboard(request):
     """Executive metrics dashboard."""
-    # TODO: Fetch metrics from backend API
+    client = get_backend_client(request)
+    
+    # Fetch metrics summary from backend
+    try:
+        response = client.get('/api/system/metrics/summary/')
+        metrics = response if response else {}
+    except Exception:
+        metrics = {}
+    
+    # Check for active alerts (placeholder logic)
+    alerts = []
+    if metrics.get('churn_rate', 0) > 10:
+        alerts.append({
+            'title': 'High Churn Rate',
+            'message': f'Current churn rate ({metrics.get("churn_rate")}%) is above threshold'
+        })
+    if metrics.get('error_rate', 0) > 5:
+        alerts.append({
+            'title': 'High Error Rate',
+            'message': f'API error rate ({metrics.get("error_rate")}%) is elevated'
+        })
+    
     return render(request, 'admin_panel/metrics_dashboard.html', {
-        'metrics': {}
+        'metrics': metrics,
+        'alerts': alerts,
+        'last_updated': timezone.now()
     })
 
 
@@ -22,9 +46,25 @@ def metrics_dashboard(request):
 @require_http_methods(["GET"])
 def billing_admin(request):
     """Billing admin dashboard."""
-    # TODO: Fetch billing summary from backend API
+    client = get_backend_client(request)
+    
+    # Get filter params
+    date_range = request.GET.get('range', '30')
+    sort_by = request.GET.get('sort', 'spend_desc')
+    
+    # Fetch billing summary from backend
+    try:
+        response = client.get(f'/api/billing/admin/reserve/summary/?range={date_range}&sort={sort_by}')
+        summary = response.get('summary', {}) if response else {}
+        accounts = response.get('accounts', []) if response else []
+    except Exception as e:
+        messages.warning(request, 'Unable to fetch billing data.')
+        summary = {}
+        accounts = []
+    
     return render(request, 'admin_panel/billing_admin.html', {
-        'accounts': []
+        'summary': summary,
+        'accounts': accounts
     })
 
 

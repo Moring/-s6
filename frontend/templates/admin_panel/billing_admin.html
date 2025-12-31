@@ -1,0 +1,430 @@
+{% extends "base_shell.html" %}
+{% load static %}
+
+{% block title %}Billing Admin - AfterResume{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="page-title">Billing Administration</h4>
+                <p class="text-muted mb-0">Monitor system-wide billing and usage costs</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline-primary me-2" 
+                        hx-get="{% url 'admin_panel:billing_admin' %}" 
+                        hx-target="body" 
+                        hx-swap="outerHTML">
+                    <i class="ti ti-refresh me-1"></i> Refresh
+                </button>
+                <button type="button" class="btn btn-primary" 
+                        onclick="exportBillingCSV()">
+                    <i class="ti ti-download me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-primary-subtle text-primary rounded fs-18">
+                                <i class="ti ti-users"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Total Accounts</h6>
+                        <h4 class="mb-0">{{ summary.total_accounts|default:"—" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-success-subtle text-success rounded fs-18">
+                                <i class="ti ti-wallet"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Total Reserves</h6>
+                        <h4 class="mb-0">${{ summary.total_reserves|default:"0.00" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-warning-subtle text-warning rounded fs-18">
+                                <i class="ti ti-alert-triangle"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Low Balance</h6>
+                        <h4 class="mb-0">{{ summary.low_balance_count|default:"0" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-danger-subtle text-danger rounded fs-18">
+                                <i class="ti ti-x-circle"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Delinquent</h6>
+                        <h4 class="mb-0">{{ summary.delinquent_count|default:"0" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="date_range" class="form-label">Time Period</label>
+                        <select class="form-select" id="date_range" name="range">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="sort_by" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort_by" name="sort">
+                            <option value="spend_desc">Highest Spend</option>
+                            <option value="balance_asc">Lowest Balance</option>
+                            <option value="recent">Most Recent Activity</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ti ti-filter me-1"></i> Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Account Balances & Usage</h5>
+                
+                {% if accounts %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Tenant</th>
+                                <th>Reserve Balance</th>
+                                <th>Last 30d Spend</th>
+                                <th>Status</th>
+                                <th>Last Activity</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for account in accounts %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ account.username }}</strong>
+                                    </div>
+                                    <small class="text-muted">{{ account.email }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info-subtle text-info">
+                                        {{ account.tenant_name|default:"—" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if account.balance_cents < 500 %}
+                                            <i class="ti ti-alert-circle text-danger me-1"></i>
+                                        {% endif %}
+                                        <strong>${{ account.balance_cents|default:0|floatformat:2 }}</strong>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>${{ account.spend_30d|default:0|floatformat:2 }}</div>
+                                    <small class="text-muted">{{ account.usage_count|default:0 }} jobs</small>
+                                </td>
+                                <td>
+                                    {% if account.balance_cents < 0 %}
+                                        <span class="badge badge-soft-danger">Delinquent</span>
+                                    {% elif account.balance_cents < 500 %}
+                                        <span class="badge badge-soft-warning">Low Balance</span>
+                                    {% else %}
+                                        <span class="badge badge-soft-success">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if account.last_activity %}
+                                        <div>{{ account.last_activity|date:"M d, Y" }}</div>
+                                        <small class="text-muted">{{ account.last_activity|timesince }} ago</small>
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <a href="#" class="text-muted" data-bs-toggle="dropdown">
+                                            <i class="ti ti-dots-vertical"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-end">
+                                            <button class="dropdown-item" 
+                                                    onclick="viewLedger('{{ account.user_id }}', '{{ account.username }}')">
+                                                <i class="ti ti-list me-2"></i>View Ledger
+                                            </button>
+                                            <button class="dropdown-item" 
+                                                    onclick="adjustBalance('{{ account.user_id }}', '{{ account.username }}')">
+                                                <i class="ti ti-edit me-2"></i>Adjust Balance
+                                            </button>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="#">
+                                                <i class="ti ti-user me-2"></i>View Profile
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 text-center text-muted">
+                    <small>Showing {{ accounts|length }} account(s)</small>
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <i class="ti ti-wallet fs-64 text-muted mb-3"></i>
+                    <h5 class="text-muted">No Billing Data Available</h5>
+                    <p class="text-muted mb-0">Billing data will appear here once users have reserve balances.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Adjust Balance Modal -->
+<div class="modal fade" id="adjustBalanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adjust Reserve Balance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Adjusting balance for: <strong id="adjust-username"></strong></p>
+                
+                <div class="mb-3">
+                    <label for="adjustment-amount" class="form-label">Adjustment Amount ($)</label>
+                    <input type="number" step="0.01" class="form-control" id="adjustment-amount" 
+                           placeholder="Enter positive or negative amount">
+                    <small class="text-muted">Use positive for credits, negative for debits</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="adjustment-reason" class="form-label">Reason (Required)</label>
+                    <textarea class="form-control" id="adjustment-reason" rows="3" 
+                              placeholder="Explain why this adjustment is being made..." required></textarea>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="ti ti-alert-triangle me-2"></i>
+                    <strong>Important:</strong> All manual adjustments are audited and logged.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAdjustment()">
+                    Apply Adjustment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Ledger Modal -->
+<div class="modal fade" id="viewLedgerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reserve Ledger: <span id="ledger-username"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="ledger-content">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading ledger entries...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentAdjustUserId = null;
+
+function adjustBalance(userId, username) {
+    currentAdjustUserId = userId;
+    document.getElementById('adjust-username').textContent = username;
+    document.getElementById('adjustment-amount').value = '';
+    document.getElementById('adjustment-reason').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('adjustBalanceModal'));
+    modal.show();
+}
+
+function confirmAdjustment() {
+    const amount = parseFloat(document.getElementById('adjustment-amount').value);
+    const reason = document.getElementById('adjustment-reason').value.trim();
+    
+    if (!amount || amount === 0) {
+        alert('Please enter a valid adjustment amount');
+        return;
+    }
+    
+    if (!reason) {
+        alert('Please provide a reason for this adjustment');
+        return;
+    }
+    
+    // Convert to cents
+    const amountCents = Math.round(amount * 100);
+    
+    fetch('/api-proxy/billing/admin/reserve/adjust/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            user_id: currentAdjustUserId,
+            amount_cents: amountCents,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Balance adjusted successfully');
+        bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide();
+        location.reload();
+    })
+    .catch(error => {
+        alert('Error adjusting balance: ' + error);
+    });
+}
+
+function viewLedger(userId, username) {
+    document.getElementById('ledger-username').textContent = username;
+    document.getElementById('ledger-content').innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2">Loading ledger entries...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('viewLedgerModal'));
+    modal.show();
+    
+    // Fetch ledger data
+    fetch(`/api-proxy/billing/reserve/ledger/?user_id=${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.entries && data.entries.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance</th><th>Notes</th></tr></thead><tbody>';
+                
+                data.entries.forEach(entry => {
+                    const amount = entry.amount_cents / 100;
+                    const balance = entry.balance_after / 100;
+                    const amountClass = amount >= 0 ? 'text-success' : 'text-danger';
+                    
+                    html += `<tr>
+                        <td>${new Date(entry.created_at).toLocaleDateString()}</td>
+                        <td><span class="badge bg-secondary-subtle text-secondary">${entry.entry_type}</span></td>
+                        <td class="${amountClass}">$${amount.toFixed(2)}</td>
+                        <td>$${balance.toFixed(2)}</td>
+                        <td><small>${entry.notes || '—'}</small></td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                document.getElementById('ledger-content').innerHTML = html;
+            } else {
+                document.getElementById('ledger-content').innerHTML = `
+                    <div class="text-center py-5">
+                        <p class="text-muted">No ledger entries found</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('ledger-content').innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading ledger: ${error}
+                </div>
+            `;
+        });
+}
+
+function exportBillingCSV() {
+    window.location.href = '/api-proxy/billing/admin/ledger/export.csv';
+}
+</script>
+
+{% endblock %}

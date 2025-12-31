@@ -148,3 +148,61 @@ def detail(request, entry_id):
         messages.error(request, f"Error: {str(e)}")
         return redirect('worklog:index')
 
+
+@login_required
+@require_http_methods(["POST"])
+def edit_submit(request, entry_id):
+    """Submit worklog entry edits (HTMX endpoint)."""
+    client = get_backend_client(request)
+    
+    # Get form data
+    date = request.POST.get('date')
+    content = request.POST.get('content', '').strip()
+    employer = request.POST.get('employer', '').strip()
+    project = request.POST.get('project', '').strip()
+    tags = request.POST.get('tags', '').strip()
+    
+    # Build metadata
+    metadata = {}
+    if employer:
+        metadata['employer'] = employer
+    if project:
+        metadata['project'] = project
+    if tags:
+        metadata['tags'] = [tag.strip() for tag in tags.split(',') if tag.strip()]
+    
+    try:
+        result = client.update_worklog(entry_id, {
+            'date': date,
+            'content': content,
+            'metadata': metadata
+        })
+        
+        if result:
+            messages.success(request, "Entry updated successfully")
+            return redirect('worklog:detail', entry_id=entry_id)
+        else:
+            messages.error(request, "Failed to update entry")
+            return redirect('worklog:detail', entry_id=entry_id)
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('worklog:detail', entry_id=entry_id)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete(request, entry_id):
+    """Delete worklog entry."""
+    client = get_backend_client(request)
+    
+    try:
+        success = client.delete_worklog(entry_id)
+        if success:
+            messages.success(request, "Entry deleted successfully")
+        else:
+            messages.error(request, "Failed to delete entry")
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+    
+    return redirect('worklog:index')
+

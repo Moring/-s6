@@ -60,6 +60,14 @@ class BackendAPIClient:
         """POST request to backend."""
         return self._make_request('POST', endpoint, **kwargs)
     
+    def patch(self, endpoint: str, **kwargs) -> Optional[Any]:
+        """PATCH request to backend."""
+        return self._make_request('PATCH', endpoint, **kwargs)
+    
+    def delete(self, endpoint: str, **kwargs) -> Optional[Any]:
+        """DELETE request to backend."""
+        return self._make_request('DELETE', endpoint, **kwargs)
+    
     def get_token(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
         Get auth token from backend.
@@ -186,6 +194,17 @@ class BackendAPIClient:
     def analyze_worklog(self, worklog_id: int) -> Optional[Dict[str, Any]]:
         """Trigger worklog analysis."""
         return self._make_request('POST', f'/api/worklogs/{worklog_id}/analyze/')
+    
+    def update_worklog(self, worklog_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a work log."""
+        cache.delete('worklogs_list')
+        return self._make_request('PATCH', f'/api/worklogs/{worklog_id}/', json=data)
+    
+    def delete_worklog(self, worklog_id: int) -> bool:
+        """Delete a work log."""
+        cache.delete('worklogs_list')
+        result = self._make_request('DELETE', f'/api/worklogs/{worklog_id}/')
+        return result is not None
 
 
 def get_backend_client(request=None) -> BackendAPIClient:

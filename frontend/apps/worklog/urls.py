@@ -9,4 +9,6 @@ urlpatterns = [
     path('quick-add-submit/', views.quick_add_submit, name='quick_add_submit'),
     path('list/', views.worklog_list_partial, name='list_partial'),
     path('<int:entry_id>/', views.detail, name='detail'),
+    path('<int:entry_id>/edit/', views.edit_submit, name='edit'),
+    path('<int:entry_id>/delete/', views.delete, name='delete'),
 ]
