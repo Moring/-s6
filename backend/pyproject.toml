@@ -12,6 +12,10 @@ dependencies = [
     "python-dotenv>=1.0",
     "pydantic>=2.5",
     "croniter>=2.0",
+    "django-allauth>=0.57",
+    "minio>=7.2",
+    "pillow>=10.0",
+    "dj-database-url>=2.1",
 ]
 
 [project.optional-dependencies]

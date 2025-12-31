@@ -23,8 +23,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    # Third party
     'rest_framework',
+    'rest_framework.authtoken',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
     'huey.contrib.djhuey',
+    # Core apps
+    'apps.tenants',
+    'apps.artifacts',
     # Domain apps
     'apps.worklog',
     'apps.skills',
@@ -49,6 +58,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+    'apps.tenants.middleware.TenantMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -72,13 +83,35 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'ATOMIC_REQUESTS': False,
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Production/Docker: use PostgreSQL from environment
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        }
+    except ImportError:
+        # Fallback if dj_database_url not installed
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': os.environ.get('POSTGRES_DB', 'afterresume'),
+                'USER': os.environ.get('POSTGRES_USER', 'afterresume'),
+                'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'afterresume'),
+                'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+                'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            }
+        }
+else:
+    # Development: fallback to SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'ATOMIC_REQUESTS': False,
+        }
     }
-}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -178,3 +211,33 @@ LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4')
 
 # System dashboard
 SYSTEM_DASHBOARD_ENABLED = os.environ.get('SYSTEM_DASHBOARD_ENABLED', 'True') == 'True'
+
+# Django sites framework (required by allauth)
+SITE_ID = 1
+
+# Allauth configuration
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Allauth configuration
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # For MVP, no email verification
+LOGIN_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# REST Framework authentication
+REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
+    'rest_framework.authentication.SessionAuthentication',
+    'rest_framework.authentication.TokenAuthentication',
+]
+REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
+    'rest_framework.permissions.IsAuthenticated',
+]

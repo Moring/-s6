@@ -1,48 +1,123 @@
 #!/usr/bin/env python
 """
 Bootstrap script - initial setup and configuration.
+Idempotent - safe to run multiple times.
 """
 import os
+import sys
+import time
+
+# Add parent directory to path so we can import config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
-django.setup()
-
-from django.core.management import call_command
+# Wait for database to be ready
+def wait_for_db(max_retries=30):
+    """Wait for database to be available."""
+    from django.db import connection
+    from django.db.utils import OperationalError
+    
+    print("Waiting for database...")
+    retries = 0
+    while retries < max_retries:
+        try:
+            connection.ensure_connection()
+            print("✓ Database is ready")
+            return True
+        except OperationalError:
+            retries += 1
+            print(f"  Database not ready, retrying ({retries}/{max_retries})...")
+            time.sleep(2)
+    
+    print("✗ Database connection failed")
+    return False
 
 
 def main():
-    print("=== AfterResume Backend Bootstrap ===\n")
+    # Set up Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
+    django.setup()
+    
+    print("\n=== AfterResume Backend Bootstrap ===\n")
+    
+    # Wait for database
+    if not wait_for_db():
+        sys.exit(1)
+    
+    # Import after Django setup
+    from django.core.management import call_command
+    from django.contrib.auth import get_user_model
+    from apps.tenants.services import create_tenant_for_user
+    
+    User = get_user_model()
     
     # Run migrations
-    print("Running migrations...")
-    call_command('migrate', '--no-input')
+    # Optionally create migrations (useful in dev) before applying them.
+    from django.conf import settings
+
+    print("\nRunning migrations...")
+    try:
+        force_make = os.environ.get('FORCE_MAKEMIGRATIONS', '0').lower() in ('1', 'true', 'yes')
+        if settings.DEBUG or force_make:
+            try:
+                print("-> Running makemigrations (dev/forced)...")
+                call_command('makemigrations', '--no-input')
+                print("-> makemigrations complete")
+            except Exception:
+                # Don't fail bootstrap if makemigrations has nothing to do or errors
+                print("-> makemigrations skipped or failed (continuing)")
+
+        call_command('migrate', '--no-input')
+        print("✓ Migrations complete")
+    except Exception as exc:
+        print(f"✗ Migrations failed: {exc}")
+        raise
     
     # Create superuser if env vars provided
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_email = os.environ.get('ADMIN_EMAIL')
-    admin_password = os.environ.get('ADMIN_PASSWORD')
+    admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
+    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
     
-    if admin_user and admin_email and admin_password:
-        print(f"\nCreating superuser: {admin_user}")
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        
-        if not User.objects.filter(username=admin_user).exists():
-            User.objects.create_superuser(
-                username=admin_user,
-                email=admin_email,
-                password=admin_password
-            )
-            print("✓ Superuser created")
-        else:
-            print("✓ Superuser already exists")
+    print(f"\nChecking for superuser: {admin_user}")
+    user = None
+    if not User.objects.filter(username=admin_user).exists():
+        user = User.objects.create_superuser(
+            username=admin_user,
+            email=admin_email,
+            password=admin_password
+        )
+        print(f"✓ Superuser created: {admin_user}")
+    else:
+        user = User.objects.get(username=admin_user)
+        print(f"✓ Superuser already exists: {admin_user}")
+    
+    # Create tenant for admin user
+    if user:
+        print(f"\nCreating tenant for {admin_user}...")
+        tenant = create_tenant_for_user(user)
+        print(f"✓ Tenant created: {tenant.name}")
+    
+    # Create Site for allauth
+    from django.contrib.sites.models import Site
+    site, created = Site.objects.get_or_create(
+        pk=1,
+        defaults={'domain': 'localhost:8000', 'name': 'AfterResume'}
+    )
+    if created:
+        print("✓ Site created for allauth")
+    else:
+        print("✓ Site already exists")
     
     print("\n=== Bootstrap Complete ===")
+    print("\nServices ready:")
+    print("  • Database: ✓")
+    print(f"  • Admin user: {admin_user}")
+    print(f"  • Admin email: {admin_email}")
     print("\nNext steps:")
-    print("  1. Run server: python manage.py runserver")
-    print("  2. Run worker: python manage.py run_huey")
-    print("  3. Visit: http://localhost:8000/api/healthz/")
+    print("  1. Backend API: http://localhost:8000/api/healthz/")
+    print("  2. Admin panel: http://localhost:8000/admin/")
+    print("  3. Login: http://localhost:8000/accounts/login/")
 
 
 if __name__ == '__main__':

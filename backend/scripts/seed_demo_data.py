@@ -3,8 +3,13 @@
 Seed demo data for testing.
 """
 import os
-import django
+import sys
 from datetime import date, timedelta
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
 django.setup()

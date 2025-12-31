@@ -67,6 +67,11 @@ tasks:
     cmds:
       - docker compose -f backend/docker-compose.yml exec backend-api python manage.py migrate
 
+  django-migrate:
+    desc: Run Django migrations locally inside the backend folder
+    cmds:
+      - cd backend && python manage.py migrate
+
   makemigrations:
     desc: Create new migrations
     cmds:
@@ -113,11 +118,11 @@ tasks:
   health:
     desc: Check health of all services
     cmds:
-      - echo "=== Checking Backend Health ==="
-      - curl -s http://localhost:8000/api/healthz/ | jq . || echo "Backend not responding"
-      - echo ""
-      - echo "=== Checking Frontend Health ==="
-      - curl -s http://localhost:3000/health/ || echo "Frontend not responding"
+      - 'echo "=== Checking Backend Health ==="'
+      - 'curl -s http://localhost:8000/api/healthz/ | jq . || echo "Backend not responding"'
+      - 'echo ""'
+      - 'echo "=== Checking Frontend Health ==="'
+      - 'curl -s http://localhost:3000/health/ || echo "Frontend not responding"'
 
   # === Development ===
   
@@ -136,7 +141,7 @@ tasks:
     cmds:
       - task: migrate
       - task: seed
-      - echo "Bootstrap complete! Frontend: http://localhost:3000"
+      - 'echo "Bootstrap complete! Frontend: http://localhost:3000"'
 
   # === Testing ===
   
@@ -164,7 +169,7 @@ tasks:
       - |
         echo "Waiting for backend to be healthy..."
         for i in {1..30}; do
-          if curl -s http://localhost:8000/api/healthz/ > /dev/null 2>&1; then
+          if curl -s "http://localhost:8000/api/healthz/" > /dev/null 2>&1; then
             echo "Backend is healthy!"
             break
           fi

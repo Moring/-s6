@@ -2,12 +2,16 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health
+from .views import worklog, skills, reports, jobs, health, artifacts
 
 urlpatterns = [
     # Health
     path('healthz/', health.healthz, name='api-healthz'),
     path('readyz/', health.readyz, name='api-readyz'),
+    
+    # Artifacts (file uploads)
+    path('artifacts/upload/', artifacts.upload_file, name='artifact-upload'),
+    path('artifacts/', artifacts.list_files, name='artifact-list'),
     
     # Worklogs
     path('worklogs/', worklog.WorkLogListCreateView.as_view(), name='worklog-list'),

@@ -1,24 +1,26 @@
-version: '3.8'
-
 services:
   frontend:
     build: .
     container_name: afterresume-frontend
+    command: sh -c "python manage.py migrate --no-input && python manage.py runserver 0.0.0.0:3000"
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+    env_file:
+      - ../.env
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
-      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
-      - VALKEY_HOST=${VALKEY_HOST}
-      - VALKEY_PORT=${VALKEY_PORT}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-frontend-dev-key}
+      - DJANGO_ALLOWED_HOSTS=*,localhost,127.0.0.1
+      - BACKEND_BASE_URL=${BACKEND_BASE_URL:-http://backend-api:8000}
+      - VALKEY_HOST=valkey-frontend
+      - VALKEY_PORT=6379
     volumes:
       - .:/app
       - frontend_static:/app/staticfiles
     depends_on:
-      - valkey
+      valkey:
+        condition: service_healthy
     networks:
       - afterresume-net
     healthcheck:
@@ -26,7 +28,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 20s
 
   valkey:
     image: valkey/valkey:latest
@@ -50,4 +52,3 @@ volumes:
 networks:
   afterresume-net:
     external: true
-    name: afterresume-net

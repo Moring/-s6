@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pyproject.toml /app/
 
 # Install dependencies
-RUN pip install --no-cache-dir django django-htmx django-redis requests python-dotenv
+RUN pip install --no-cache-dir django django-htmx django-redis requests python-dotenv django-allauth
 
 # Copy application
 COPY . /app/

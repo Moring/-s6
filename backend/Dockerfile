@@ -15,7 +15,11 @@ RUN pip install --no-cache-dir \
     python-dotenv \
     pydantic \
     croniter \
-    requests
+    requests \
+    django-allauth \
+    minio \
+    pillow \
+    dj-database-url
 
 # Copy application
 COPY . /app/

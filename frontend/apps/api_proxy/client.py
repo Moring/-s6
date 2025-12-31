@@ -17,9 +17,15 @@ class BackendAPIClient:
         self.base_url = settings.BACKEND_BASE_URL
         self.timeout = 10
     
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Dict[str, Any]]:
+    def _make_request(self, method: str, endpoint: str, auth=None, **kwargs) -> Optional[Dict[str, Any]]:
         """Make HTTP request to backend API."""
         url = f"{self.base_url}{endpoint}"
+        
+        # Add session cookie for authentication if user is authenticated
+        if auth and hasattr(auth, 'is_authenticated') and auth.is_authenticated:
+            # In production, use proper session/token passing
+            # For now, assume shared session backend or token
+            pass
         
         try:
             response = requests.request(
@@ -29,9 +35,46 @@ class BackendAPIClient:
                 **kwargs
             )
             response.raise_for_status()
-            return response.json()
+            
+            if response.content:
+                return response.json()
+            return None
         except requests.exceptions.RequestException as e:
             logger.error(f"Backend API error: {e}")
+            return None
+    
+    def get(self, endpoint: str, auth=None, **kwargs) -> Optional[Any]:
+        """GET request to backend."""
+        return self._make_request('GET', endpoint, auth=auth, **kwargs)
+    
+    def post(self, endpoint: str, auth=None, **kwargs) -> Optional[Any]:
+        """POST request to backend."""
+        return self._make_request('POST', endpoint, auth=auth, **kwargs)
+    
+    def upload_file(self, file, auth=None) -> Optional[Dict[str, Any]]:
+        """
+        Upload a file to backend.
+        
+        Args:
+            file: Django UploadedFile object
+            auth: User object for authentication
+        
+        Returns:
+            Response dict or None
+        """
+        url = f"{self.base_url}/api/artifacts/upload/"
+        
+        try:
+            files = {'file': (file.name, file.read(), file.content_type)}
+            response = requests.post(
+                url,
+                files=files,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"File upload error: {e}")
             return None
     
     def health_check(self) -> Dict[str, Any]:
@@ -42,7 +85,7 @@ class BackendAPIClient:
         if cached is not None:
             return cached
         
-        result = self._make_request('GET', '/api/healthz/')
+        result = self._make_request('GET', '/api/readyz/')
         if result is None:
             result = {'status': 'error', 'error': 'Backend unreachable'}
         
