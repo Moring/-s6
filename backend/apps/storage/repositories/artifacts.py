@@ -53,6 +53,14 @@ class ArtifactRepository:
     def get_attachment_url(self, object_key: str) -> str:
         """Get presigned URL for attachment."""
         return self.client.get_presigned_url(object_key)
+    
+    def delete_artifact(self, object_key: str) -> bool:
+        """Delete an artifact or attachment from storage."""
+        try:
+            return self.client.delete_file(object_key)
+        except Exception:
+            return False
+
 
 
 def get_artifact_repository() -> ArtifactRepository:

@@ -205,6 +205,32 @@ class BackendAPIClient:
         cache.delete('worklogs_list')
         result = self._make_request('DELETE', f'/api/worklogs/{worklog_id}/')
         return result is not None
+    
+    def upload_worklog_attachment(self, worklog_id: int, file) -> Optional[Dict[str, Any]]:
+        """Upload an attachment for a worklog entry."""
+        url = f"{self.base_url}/api/worklogs/{worklog_id}/attachments/"
+        headers = {}
+        if self.auth_token:
+            headers['Authorization'] = f'Token {self.auth_token}'
+        
+        try:
+            files = {'file': (file.name, file.read(), file.content_type)}
+            response = requests.post(
+                url,
+                files=files,
+                headers=headers,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Attachment upload error: {e}")
+            return None
+    
+    def delete_worklog_attachment(self, worklog_id: int, attachment_id: int) -> bool:
+        """Delete an attachment from a worklog entry."""
+        result = self._make_request('DELETE', f'/api/worklogs/{worklog_id}/attachments/{attachment_id}/')
+        return result is not None
 
 
 def get_backend_client(request=None) -> BackendAPIClient:

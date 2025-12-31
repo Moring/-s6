@@ -2,7 +2,7 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status, attachments
 
 urlpatterns = [
     # Health
@@ -48,6 +48,11 @@ urlpatterns = [
     path('worklogs/', worklog.WorkLogListCreateView.as_view(), name='worklog-list'),
     path('worklogs/<int:pk>/', worklog.WorkLogDetailView.as_view(), name='worklog-detail'),
     path('worklogs/<int:pk>/analyze/', worklog.analyze_worklog, name='worklog-analyze'),
+    
+    # Worklog Attachments
+    path('worklogs/<int:worklog_id>/attachments/', attachments.upload_attachment, name='attachment-upload'),
+    path('worklogs/<int:worklog_id>/attachments/<int:attachment_id>/', attachments.delete_attachment, name='attachment-delete'),
+    path('worklogs/<int:worklog_id>/attachments-list/', attachments.list_attachments, name='attachment-list'),
     
     # Skills
     path('skills/', skills.SkillListView.as_view(), name='skill-list'),

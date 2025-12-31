@@ -11,4 +11,6 @@ urlpatterns = [
     path('<int:entry_id>/', views.detail, name='detail'),
     path('<int:entry_id>/edit/', views.edit_submit, name='edit'),
     path('<int:entry_id>/delete/', views.delete, name='delete'),
+    path('<int:entry_id>/attachments/', views.upload_attachment, name='upload_attachment'),
+    path('<int:entry_id>/attachments/<int:attachment_id>/', views.delete_attachment, name='delete_attachment'),
 ]

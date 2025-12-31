@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from apps.api_proxy.client import get_backend_client
 import json
@@ -205,4 +205,69 @@ def delete(request, entry_id):
         messages.error(request, f"Error: {str(e)}")
     
     return redirect('worklog:index')
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_attachment(request, entry_id):
+    """Upload attachment for worklog entry (HTMX/AJAX endpoint)."""
+    if 'file' not in request.FILES:
+        return JsonResponse({
+            'success': False,
+            'error': 'No file provided'
+        }, status=400)
+    
+    file = request.FILES['file']
+    
+    # Validate file size (50MB max)
+    if file.size > 52428800:  # 50MB in bytes
+        return JsonResponse({
+            'success': False,
+            'error': 'File too large (max 50MB)'
+        }, status=400)
+    
+    client = get_backend_client(request)
+    
+    try:
+        # Call backend API to upload file
+        result = client.upload_worklog_attachment(entry_id, file)
+        
+        if result:
+            return JsonResponse({
+                'success': True,
+                'attachment': result
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to upload file'
+            }, status=500)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_attachment(request, entry_id, attachment_id):
+    """Delete attachment from worklog entry."""
+    client = get_backend_client(request)
+    
+    try:
+        success = client.delete_worklog_attachment(entry_id, attachment_id)
+        
+        if success:
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Failed to delete attachment'
+            }, status=500)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
