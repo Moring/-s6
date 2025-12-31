@@ -1,0 +1,42 @@
+[project]
+name = "afterresume-backend"
+version = "0.1.0"
+description = "AfterResume Backend - AI-powered work tracking and resume generation"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.0,<6.0",
+    "djangorestframework>=3.14",
+    "psycopg2-binary>=2.9",
+    "huey>=2.5",
+    "redis>=5.0",
+    "python-dotenv>=1.0",
+    "pydantic>=2.5",
+    "croniter>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-django>=4.7",
+    "pytest-cov>=4.1",
+    "black>=23.0",
+    "ruff>=0.1",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
