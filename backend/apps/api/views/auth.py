@@ -3,9 +3,10 @@ API views for authentication endpoints.
 Thin controllers - delegate to services.
 """
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout, authenticate
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
@@ -35,6 +36,7 @@ def get_user_agent(request):
 
 
 @api_view(['POST'])
+@parser_classes([JSONParser, FormParser])
 @permission_classes([AllowAny])
 def signup(request):
     """
@@ -43,6 +45,12 @@ def signup(request):
     POST /api/auth/signup/
     Body: {username, email, password, passkey}
     """
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Signup request.data: {request.data}")
+    logger.info(f"Signup request.POST: {request.POST}")
+    
     username = request.data.get('username')
     email = request.data.get('email')
     password = request.data.get('password')

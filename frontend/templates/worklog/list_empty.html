@@ -1,0 +1,15 @@
+{% load static %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="ti ti-clipboard-text display-4 text-muted"></i>
+    </div>
+    <h5 class="text-muted">No work logs yet</h5>
+    <p class="text-muted mb-4">Start tracking your work by creating your first entry.</p>
+    <button class="btn btn-primary" 
+            hx-get="{% url 'worklog:quick_add_modal' %}" 
+            hx-target="#worklog-modal" 
+            hx-swap="innerHTML">
+        <i class="ti ti-plus me-1"></i>Create Your First Entry
+    </button>
+</div>

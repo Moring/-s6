@@ -1,0 +1,113 @@
+{% load static %}
+<!-- Quick Add Worklog Modal -->
+<div class="modal fade show d-block" id="quickAddModal" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-plus-circle me-2"></i>Quick Add Work Entry
+                </h5>
+                <button type="button" class="btn-close" hx-get="/worklog/" hx-target="body" hx-swap="outerHTML"></button>
+            </div>
+            
+            <form id="quickAddForm" hx-post="{% url 'worklog:quick_add_submit' %}" hx-target="#worklog-list" hx-swap="innerHTML">
+                {% csrf_token %}
+                
+                <div class="modal-body">
+                    <!-- Date Selection -->
+                    <div class="mb-3">
+                        <label for="entry_date" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="entry_date" name="date" 
+                               value="{{ today|date:'Y-m-d' }}" required>
+                        <div class="form-text">
+                            Defaults to today. Change if logging past work.
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="mb-3">
+                        <label for="entry_content" class="form-label">What did you work on? <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="entry_content" name="content" rows="5" 
+                                  placeholder="Describe your work today. Be specific about accomplishments, tasks completed, challenges solved..." 
+                                  required autofocus></textarea>
+                        <div class="form-text">
+                            <i class="ti ti-bulb me-1"></i>Tip: Include project names, technologies used, and measurable outcomes.
+                        </div>
+                    </div>
+
+                    <!-- Optional: Project/Employer (smart suggestions) -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employer" class="form-label">Employer/Client</label>
+                            <input type="text" class="form-control" id="employer" name="employer" 
+                                   placeholder="Acme Corp" list="employer-suggestions">
+                            <datalist id="employer-suggestions">
+                                {% for employer in recent_employers %}
+                                    <option value="{{ employer }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="project" class="form-label">Project</label>
+                            <input type="text" class="form-control" id="project" name="project" 
+                                   placeholder="Website Redesign" list="project-suggestions">
+                            <datalist id="project-suggestions">
+                                {% for project in recent_projects %}
+                                    <option value="{{ project }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                    </div>
+
+                    <!-- Tags (optional) -->
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Skills/Tags</label>
+                        <input type="text" class="form-control" id="tags" name="tags" 
+                               placeholder="Python, Django, API Development">
+                        <div class="form-text">
+                            Comma-separated. Example: JavaScript, React, Frontend
+                        </div>
+                    </div>
+
+                    <!-- Validation feedback -->
+                    <div id="form-errors" class="alert alert-danger d-none" role="alert"></div>
+                </div>
+                
+                <div class="modal-footer">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div class="text-muted fs-13">
+                            <i class="ti ti-clock-hour-3 me-1"></i>
+                            Estimated time: &lt;60 seconds
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-secondary" 
+                                    hx-get="/worklog/" hx-target="body" hx-swap="outerHTML">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ti ti-device-floppy me-1"></i>Save Entry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-focus on textarea
+document.getElementById('entry_content').focus();
+
+// Character count helper (optional enhancement)
+const textarea = document.getElementById('entry_content');
+textarea.addEventListener('input', function() {
+    const length = this.value.length;
+    if (length < 20) {
+        this.classList.add('is-invalid');
+    } else {
+        this.classList.remove('is-invalid');
+    }
+});
+</script>

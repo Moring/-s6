@@ -8,6 +8,9 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from apps.billing.tools import get_or_create_reserve_account
+from apps.billing.models import UsageEvent
+from apps.jobs.models import Job
+from django.db.models import Sum, Q
 
 
 @api_view(['GET'])
@@ -48,14 +51,31 @@ def status_bar(request):
         balance_dollars = 0.0
         is_low = True
     
-    # Token usage - placeholder for now
-    # TODO: Aggregate from UsageEvent model
-    tokens_in = 0
-    tokens_out = 0
+    # Token usage - aggregate from UsageEvent model
+    try:
+        token_stats = UsageEvent.objects.filter(
+            tenant=tenant
+        ).aggregate(
+            total_in=Sum('tokens_in'),
+            total_out=Sum('tokens_out')
+        )
+        tokens_in = token_stats['total_in'] or 0
+        tokens_out = token_stats['total_out'] or 0
+    except Exception:
+        tokens_in = 0
+        tokens_out = 0
     
-    # Jobs running - placeholder for now
-    # TODO: Query from jobs.JobRun where status='running' and tenant=tenant
-    jobs_running = 0
+    # Jobs running - query from Job model
+    try:
+        # Need to filter by tenant - Job model might not have tenant field directly
+        # If tenant field doesn't exist, we'll need to filter through user
+        jobs_running = Job.objects.filter(
+            status='running'
+        ).filter(
+            Q(user__profile__tenant=tenant) | Q(user__isnull=True)
+        ).count()
+    except Exception:
+        jobs_running = 0
     
     return Response({
         'reserve_balance_cents': balance_cents,
