@@ -71,13 +71,19 @@ class AuthEvent(models.Model):
         """
         Convenience method to create an auth event.
         """
-        return cls.objects.create(
-            event_type=event_type,
-            user=user,
-            ip_address=ip_address,
-            user_agent=user_agent,
-            passkey=passkey,
-            details=details or {},
-            success=success,
-            failure_reason=failure_reason
-        )
+        # Build kwargs, only including user_agent if explicitly provided
+        kwargs = {
+            'event_type': event_type,
+            'user': user,
+            'ip_address': ip_address,
+            'passkey': passkey,
+            'details': details or {},
+            'success': success,
+            'failure_reason': failure_reason
+        }
+        
+        # Only add user_agent if it's not None (to allow model default to work)
+        if user_agent is not None:
+            kwargs['user_agent'] = user_agent
+        
+        return cls.objects.create(**kwargs)

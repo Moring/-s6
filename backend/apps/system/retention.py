@@ -151,7 +151,7 @@ class RetentionManager:
         
         old_jobs = Job.objects.filter(
             status='failed',
-            updated_at__lt=cutoff_date
+            finished_at__lt=cutoff_date
         )
         count = old_jobs.count()
         
@@ -195,27 +195,16 @@ class RetentionManager:
         
         cutoff_date = timezone.now() - timedelta(days=policy.days)
         
-        old_artifacts = Artifact.objects.filter(
-            created_at__lt=cutoff_date,
-            artifact_type='job_output'  # Only job artifacts, not user uploads
-        )
-        count = old_artifacts.count()
-        
-        if not dry_run:
-            # Delete from storage and database
-            for artifact in old_artifacts:
-                try:
-                    artifact.delete()  # Should trigger storage cleanup
-                except Exception as e:
-                    logger.error(f"Failed to delete artifact {artifact.id}: {e}")
-            
-            logger.info(f"Cleaned up {count} job artifacts older than {policy.days} days")
+        # For now, we'll skip artifact cleanup since we don't have a clear way to distinguish
+        # job artifacts from user uploads without an artifact_type field
+        # TODO: Add artifact_type field or use path/name patterns to identify job artifacts
+        logger.info(f"Job artifact cleanup skipped - needs artifact_type field")
         
         return {
             'policy': 'job_artifacts',
-            'status': 'success',
-            'deleted': count,
-            'cutoff_date': cutoff_date.isoformat(),
+            'status': 'not_implemented',
+            'deleted': 0,
+            'message': 'Job artifact cleanup requires artifact_type field',
             'dry_run': dry_run,
         }
     

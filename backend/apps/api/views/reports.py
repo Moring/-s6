@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from apps.reporting.models import Report
 from apps.reporting.serializers import ReportSerializer
-from apps.jobs.dispatcher import enqueue
+from apps.jobs.dispatcher import enqueue_safe
 from apps.api.rate_limiting import rate_limit, REPORT_RATE_LIMITER, AI_ACTION_RATE_LIMITER
 
 
@@ -35,7 +35,7 @@ def generate_report_view(request):
     kind = request.data.get('kind', 'status')
     window_days = request.data.get('window_days', 7)
     
-    job = enqueue(
+    success, job, error = enqueue_safe(
         job_type='report.generate',
         payload={
             'user_id': request.user.id if request.user.is_authenticated else None,
@@ -45,6 +45,11 @@ def generate_report_view(request):
         trigger='api',
         user=request.user if request.user.is_authenticated else None
     )
+    
+    if not success:
+        return Response({
+            'error': error or 'Failed to enqueue job'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
     
     return Response({
         'job_id': str(job.id),

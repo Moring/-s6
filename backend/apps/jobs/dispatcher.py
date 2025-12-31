@@ -70,12 +70,12 @@ def enqueue(
         quota_manager = QuotaManager(tenant)
         
         # Check job quota
-        allowed, error = quota_manager.check_job_quota()
+        allowed, error = quota_manager.check_quota('jobs_per_day')
         if not allowed:
             raise QuotaExceededError(error)
         
         # Consume job quota
-        quota_manager.consume_job()
+        quota_manager.consume_quota('jobs_per_day')
     
     # Enforce concurrency limits
     if enforce_concurrency and tenant:

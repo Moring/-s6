@@ -61,7 +61,7 @@ def check_reserve_balance_integrity() -> IntegrityCheckResult:
     - Balance matches cached value
     """
     from apps.tenants.models import Tenant
-    from apps.billing.models import ReserveLedgerEntry as LedgerEntry
+    from apps.billing.models import ReserveLedgerEntry
     
     result = IntegrityCheckResult('reserve_balance_integrity')
     
@@ -70,10 +70,10 @@ def check_reserve_balance_integrity() -> IntegrityCheckResult:
         current_balance = tenant.settings.get('reserve_balance', 0) if hasattr(tenant, 'settings') and tenant.settings else 0
         
         # Calculate balance from ledger
-        ledger_sum = LedgerEntry.objects.filter(
+        ledger_sum = ReserveLedgerEntry.objects.filter(
             tenant=tenant
         ).aggregate(
-            total=Sum('amount')
+            total=Sum('amount_cents')
         )['total'] or Decimal('0')
         
         # Check if they match
@@ -146,13 +146,13 @@ def check_ledger_entry_integrity() -> IntegrityCheckResult:
     - All entries have valid amounts
     - Entries are balanced (if double-entry bookkeeping)
     """
-    from apps.billing.models import LedgerEntry
+    from apps.billing.models import ReserveLedgerEntry
     
     result = IntegrityCheckResult('ledger_entry_integrity')
     
     # Check for zero or null amounts
-    invalid_amounts = LedgerEntry.objects.filter(
-        Q(amount=0) | Q(amount__isnull=True)
+    invalid_amounts = ReserveLedgerEntry.objects.filter(
+        Q(amount_cents=0) | Q(amount_cents__isnull=True)
     ).count()
     
     if invalid_amounts > 0:
@@ -175,36 +175,27 @@ def check_stripe_charge_integrity() -> IntegrityCheckResult:
     - Ledger amounts match Stripe amounts
     - No orphaned charges or entries
     """
-    from apps.billing.models import ReserveLedgerEntry as LedgerEntry, StripeCharge
+    from apps.billing.models import ReserveLedgerEntry
     
     result = IntegrityCheckResult('stripe_charge_integrity')
     
-    # This would require StripeCharge model - if it doesn't exist, skip
-    try:
-        # Get all successful charges
-        charges = StripeCharge.objects.filter(status='succeeded')
-        
-        for charge in charges:
-            # Check if ledger entry exists
-            ledger_entry = LedgerEntry.objects.filter(
-                stripe_charge_id=charge.stripe_id
-            ).first()
-            
-            if not ledger_entry:
-                result.add_discrepancy(
-                    f'Stripe charge {charge.stripe_id} has no ledger entry',
-                    expected='ledger entry exists',
-                    actual='no ledger entry'
-                )
-            elif abs(float(charge.amount) - float(ledger_entry.amount)) > 0.01:
-                result.add_discrepancy(
-                    f'Stripe charge {charge.stripe_id} amount mismatch',
-                    expected=float(charge.amount),
-                    actual=float(ledger_entry.amount)
-                )
+    # StripeCharge model doesn't exist - we track charges via stripe_event_id in ledger
+    # Check that ledger entries with stripe references are valid
+    stripe_entries = ReserveLedgerEntry.objects.filter(
+        related_stripe_event_id__isnull=False
+    )
     
-    except Exception as e:
-        result.add_warning(f'Stripe charge integrity check skipped: {str(e)}')
+    for entry in stripe_entries:
+        # Basic validation: non-zero amounts, valid balance
+        if entry.amount_cents == 0:
+            result.add_warning(
+                f'Ledger entry {entry.id} has zero amount for Stripe event',
+                entry.related_stripe_event_id
+            )
+    
+    # If no issues found, all is good
+    if not result.warnings:
+        result.add_warning('No Stripe-related ledger entries found or all entries valid')
     
     return result
 

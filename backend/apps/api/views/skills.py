@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from apps.skills.models import Skill, SkillEvidence
 from apps.skills.serializers import SkillSerializer, SkillEvidenceSerializer
-from apps.jobs.dispatcher import enqueue
+from apps.jobs.dispatcher import enqueue_safe
 from apps.api.rate_limiting import rate_limit, AI_ACTION_RATE_LIMITER
 
 
@@ -37,7 +37,7 @@ def recompute_skills(request):
     """Enqueue skills extraction job."""
     window_days = request.data.get('window_days', 30)
     
-    job = enqueue(
+    success, job, error = enqueue_safe(
         job_type='skills.extract',
         payload={
             'user_id': request.user.id if request.user.is_authenticated else None,
@@ -46,6 +46,11 @@ def recompute_skills(request):
         trigger='api',
         user=request.user if request.user.is_authenticated else None
     )
+    
+    if not success:
+        return Response({
+            'error': error or 'Failed to enqueue job'
+        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
     
     return Response({
         'job_id': str(job.id),

@@ -279,7 +279,7 @@ class TenantManager:
                     'owner_id': tenant.owner.id,
                     'is_active': tenant.is_active if hasattr(tenant, 'is_active') else True,
                     'created_at': tenant.created_at.isoformat(),
-                    'member_count': tenant.members.count(),
+                    'member_count': tenant.memberships.count(),
                     'plan': getattr(tenant, 'plan', 'free'),
                 }
                 for tenant in page_obj
@@ -314,13 +314,13 @@ class TenantManager:
         quota_manager = QuotaManager(tenant)
         
         # Get usage stats
-        from apps.worklog.models import WorklogEntry
+        from apps.worklog.models import WorkLog
         from apps.artifacts.models import Artifact
         from apps.jobs.models import Job
         
-        worklog_count = WorklogEntry.objects.filter(tenant=tenant).count()
+        worklog_count = WorkLog.objects.filter(user=tenant.owner).count()
         artifact_count = Artifact.objects.filter(tenant=tenant).count()
-        job_count = Job.objects.filter(tenant=tenant).count()
+        job_count = Job.objects.filter(user=tenant.owner).count()
         
         return {
             'id': tenant.id,
@@ -343,12 +343,10 @@ class TenantManager:
                 for m in memberships
             ],
             'quotas': {
-                name: {
-                    'limit': quota.limit,
-                    'window_hours': quota.window_hours,
-                    'description': quota.description,
-                }
-                for name, quota in quota_manager.quotas.items()
+                'jobs_per_day': quota_manager.get_quota('jobs_per_day').__dict__ if quota_manager.get_quota('jobs_per_day') else None,
+                'ai_tokens_per_day': quota_manager.get_quota('ai_tokens_per_day').__dict__ if quota_manager.get_quota('ai_tokens_per_day') else None,
+                'storage_bytes': quota_manager.get_quota('storage_bytes').__dict__ if quota_manager.get_quota('storage_bytes') else None,
+                'uploads_per_day': quota_manager.get_quota('uploads_per_day').__dict__ if quota_manager.get_quota('uploads_per_day') else None,
             },
             'usage': {
                 'worklog_entries': worklog_count,

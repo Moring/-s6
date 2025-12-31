@@ -112,16 +112,16 @@ class DataExporter:
         from apps.worklog.models import WorkLog
         
         entries = WorkLog.objects.filter(
-            tenant=self.tenant
+            user=self.user
         ).order_by('-date')
         
         return [
             {
                 'id': entry.id,
                 'date': entry.date.isoformat(),
-                'hours': float(entry.hours) if entry.hours else None,
-                'description': entry.description,
-                'tags': entry.tags,
+                'content': entry.content,
+                'source': entry.source,
+                'metadata': entry.metadata,
                 'created_at': entry.created_at.isoformat(),
                 'updated_at': entry.updated_at.isoformat(),
             }
@@ -133,18 +133,19 @@ class DataExporter:
         from apps.skills.models import Skill
         
         skills = Skill.objects.filter(
-            tenant=self.tenant
-        ).order_by('name')
+            user=self.user
+        ).order_by('normalized')
         
         return [
             {
                 'id': skill.id,
                 'name': skill.name,
-                'category': skill.category,
-                'proficiency': skill.proficiency,
-                'years_experience': skill.years_experience,
-                'last_used': skill.last_used.isoformat() if skill.last_used else None,
+                'normalized': skill.normalized,
+                'confidence': skill.confidence,
+                'level': skill.level,
+                'metadata': skill.metadata,
                 'created_at': skill.created_at.isoformat(),
+                'updated_at': skill.updated_at.isoformat(),
             }
             for skill in skills
         ]
@@ -177,19 +178,19 @@ class DataExporter:
         from apps.reporting.models import Report
         
         reports = Report.objects.filter(
-            tenant=self.tenant
+            user=self.user
         ).order_by('-created_at')
         
         return [
             {
                 'id': report.id,
-                'report_type': report.report_type,
-                'parameters': report.parameters,
-                'status': report.status,
+                'kind': report.kind,
+                'content': report.content,
+                'rendered_text': report.rendered_text,
+                'rendered_html': report.rendered_html,
+                'metadata': report.metadata,
                 'created_at': report.created_at.isoformat(),
-                'completed_at': report.completed_at.isoformat() if report.completed_at else None,
-                # Report content/artifacts included
-                'content': report.content if hasattr(report, 'content') else None,
+                'updated_at': report.updated_at.isoformat(),
             }
             for report in reports
         ]
@@ -200,17 +201,16 @@ class DataExporter:
         
         ledger_entries = ReserveLedgerEntry.objects.filter(
             tenant=self.tenant
-        ).order_by('-timestamp')
+        ).order_by('-created_at')
         
         return {
-            'current_balance': float(self.tenant.reserve_balance) if hasattr(self.tenant, 'reserve_balance') else 0,
             'ledger_entries': [
                 {
-                    'timestamp': entry.timestamp.isoformat(),
-                    'type': entry.entry_type,
-                    'amount': float(entry.amount),
-                    'description': entry.description,
-                    'balance_after': float(entry.balance_after),
+                    'created_at': entry.created_at.isoformat(),
+                    'entry_type': entry.entry_type,
+                    'amount_cents': entry.amount_cents,
+                    'balance_after_cents': entry.balance_after_cents,
+                    'notes': entry.notes,
                 }
                 for entry in ledger_entries
             ],
