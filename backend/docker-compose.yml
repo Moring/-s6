@@ -173,4 +173,4 @@ volumes:
 
 networks:
   afterresume-net:
-    driver: bridge
+    external: true

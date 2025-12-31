@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Sign In | AfterResume</title>
+    <title>Sign Up | AfterResume</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="AfterResume - AI-powered work tracking and resume generation">
     <meta name="author" content="AfterResume">
@@ -39,8 +39,8 @@
                                         <a href="{% url 'ui:home' %}" class="logo-light">
                                             <img src="{% static 'img/logo.png' %}" alt="logo" height="32">
                                         </a>
-                                        <h4 class="fw-bold mt-4">Welcome to AfterResume</h4>
-                                        <p class="text-muted w-lg-75 mx-auto">Let's get you signed in. Enter your credentials to continue.</p>
+                                        <h4 class="fw-bold mt-4">Create Your Account</h4>
+                                        <p class="text-muted w-lg-75 mx-auto">Sign up with your invite passkey to start tracking your work.</p>
                                     </div>
 
                                     {% if messages %}
@@ -52,60 +52,73 @@
                                         {% endfor %}
                                     {% endif %}
 
-                                    {# show form-level errors from django-allauth when login fails #}
-                                    {% if form and form.non_field_errors %}
-                                        {% for err in form.non_field_errors %}
-                                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                                {{ err }}
-                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                            </div>
-                                        {% endfor %}
-                                    {% endif %}
-
-                                    <form method="post" action="{% url 'account_login' %}">
+                                    <form method="post">
                                         {% csrf_token %}
                                         
                                         <div class="mb-3">
-                                            <label for="id_login" class="form-label">Email or Username <span class="text-danger">*</span></label>
+                                            <label for="id_passkey" class="form-label">Invite Passkey <span class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <span class="input-group-text bg-light"><i class="ti ti-mail text-muted fs-xl"></i></span>
-                                                <input type="text" class="form-control" id="id_login" name="login" placeholder="you@example.com" required value="{{ form.login.value|default_if_none:'' }}">
+                                                <span class="input-group-text bg-light"><i class="ti ti-key text-muted fs-xl"></i></span>
+                                                <input type="text" class="form-control" id="id_passkey" name="passkey" placeholder="Enter your invite code" required autofocus>
                                             </div>
-                                            {% if form and form.login.errors %}
-                                                <div class="form-text text-danger">
-                                                    {% for e in form.login.errors %}{{ e }}{% if not forloop.last %}<br/>{% endif %}{% endfor %}
-                                                </div>
-                                            {% endif %}
+                                            <div class="form-text text-muted">
+                                                You need an invite passkey to create an account. Contact your administrator if you don't have one.
+                                            </div>
+                                        </div>
+
+                                        <hr class="my-4">
+
+                                        <div class="mb-3">
+                                            <label for="id_username" class="form-label">Username <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="ti ti-user text-muted fs-xl"></i></span>
+                                                <input type="text" class="form-control" id="id_username" name="username" placeholder="johndoe" required value="{{ username|default_if_none:'' }}">
+                                            </div>
                                         </div>
 
                                         <div class="mb-3">
-                                            <label for="id_password" class="form-label">Password <span class="text-danger">*</span></label>
+                                            <label for="id_email" class="form-label">Email address <span class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <span class="input-group-text bg-light"><i class="ti ti-lock-password text-muted fs-xl"></i></span>
-                                                <input type="password" class="form-control" id="id_password" name="password" placeholder="••••••••" required>
+                                                <span class="input-group-text bg-light"><i class="ti ti-mail text-muted fs-xl"></i></span>
+                                                <input type="email" class="form-control" id="id_email" name="email" placeholder="you@example.com" required value="{{ email|default_if_none:'' }}">
                                             </div>
-                                            {% if form and form.password.errors %}
-                                                <div class="form-text text-danger">
-                                                    {% for e in form.password.errors %}{{ e }}{% if not forloop.last %}<br/>{% endif %}{% endfor %}
-                                                </div>
-                                            {% endif %}
                                         </div>
 
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <div class="form-check">
-                                                <input class="form-check-input form-check-input-light fs-14" type="checkbox" id="id_remember" name="remember">
-                                                <label class="form-check-label" for="id_remember">Keep me signed in</label>
+                                        <div class="mb-3">
+                                            <label for="id_password1" class="form-label">Password <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="ti ti-lock-password text-muted fs-xl"></i></span>
+                                                <input type="password" class="form-control" id="id_password1" name="password1" placeholder="••••••••" required>
                                             </div>
-                                            <a href="{% url 'account_reset_password' %}" class="text-decoration-underline link-offset-3 text-muted">Forgot Password?</a>
+                                            <div class="form-text text-muted">
+                                                Must be at least 8 characters with a mix of letters and numbers.
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="id_password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="ti ti-lock-password text-muted fs-xl"></i></span>
+                                                <input type="password" class="form-control" id="id_password2" name="password2" placeholder="••••••••" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input form-check-input-light fs-14" type="checkbox" id="termsCheck" required>
+                                                <label class="form-check-label" for="termsCheck">
+                                                    I agree to the <a href="#" class="text-decoration-underline">Terms of Service</a>
+                                                </label>
+                                            </div>
                                         </div>
 
                                         <div class="d-grid">
-                                            <button type="submit" class="btn btn-primary fw-semibold py-2">Sign In</button>
+                                            <button type="submit" class="btn btn-primary fw-semibold py-2">Create Account</button>
                                         </div>
                                     </form>
 
                                     <p class="text-muted text-center mt-4 mb-0">
-                                        New here? <a href="{% url 'account_signup' %}" class="text-decoration-underline link-offset-3 fw-semibold">Create an account</a>
+                                        Already have an account? <a href="{% url 'account_login' %}" class="text-decoration-underline link-offset-3 fw-semibold">Sign in</a>
                                     </p>
 
                                     <p class="text-center text-muted mt-4 mb-0">

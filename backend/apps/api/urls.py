@@ -2,12 +2,15 @@
 API URL configuration.
 """
 from django.urls import path
-from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing
+from .views import worklog, skills, reports, jobs, health, artifacts, auth, admin, system_metrics, billing, status
 
 urlpatterns = [
     # Health
     path('healthz/', health.healthz, name='api-healthz'),
     path('readyz/', health.readyz, name='api-readyz'),
+    
+    # Status Bar
+    path('status/bar/', status.status_bar, name='status-bar'),
     
     # Auth
     path('auth/signup/', auth.signup, name='auth-signup'),
