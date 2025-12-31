@@ -277,6 +277,240 @@ job.status = 'cancelled'
 job.save()
 ```
 
+## Gamification Management
+
+### Overview
+The gamification system encourages consistent logging and quality content through streaks, XP, badges, and weekly challenges. All reward logic runs asynchronously via DAG workflows with full audit logging.
+
+### View Engagement Metrics
+Admin endpoint for platform-wide gamification metrics:
+
+```bash
+curl -H "Authorization: Token ADMIN_TOKEN" \
+  http://localhost:8000/api/admin/gamification/metrics/
+```
+
+Returns:
+```json
+{
+  "summary": {
+    "total_users_with_xp": 42,
+    "avg_level": 3.2,
+    "total_badges_awarded": 156,
+    "active_streaks": 18
+  },
+  "streak_distribution": {
+    "1-7": 25,
+    "8-30": 12,
+    "31-100": 3,
+    "100+": 2
+  },
+  "daily_active_loggers": 15,
+  "challenge_completion_rate": 0.68
+}
+```
+
+### Configure Reward Rules
+Edit reward configuration via Django admin:
+
+```bash
+# Access admin interface
+open http://localhost:8000/admin/gamification/rewardconfig/
+```
+
+**Default Configuration**:
+```python
+{
+    'min_entry_length': 20,           # Minimum characters for valid entry
+    'max_entries_per_hour': 10,       # Spam prevention
+    'duplicate_threshold_seconds': 60,  # Min seconds between entries
+    'max_daily_xp': 200,              # Daily XP cap
+    'xp_rules': {
+        'base_entry': 10,
+        'per_attachment': 5,          # Max 3 attachments count
+        'per_tag': 3,                 # Max 5 tags count
+        'length_bonus_threshold': 200,
+        'length_bonus': 10,
+        'outcome_bonus': 15,
+        'metrics_bonus': 10
+    },
+    'max_freezes': 3                  # Streak freeze limit
+}
+```
+
+To create new config version:
+```python
+from apps.gamification.models import RewardConfig
+
+config = RewardConfig.objects.create(
+    version=2,
+    config={
+        # your config
+    },
+    is_active=True  # Deactivates all others automatically
+)
+```
+
+### Manage Badges
+Add new badge definitions:
+
+```python
+from apps.gamification.models import BadgeDefinition
+
+BadgeDefinition.objects.create(
+    code='custom_badge',
+    name='🎉 Custom Achievement',
+    description='Your custom achievement description',
+    category='special',
+    icon='🎉',
+    trigger_type='custom_trigger',
+    trigger_threshold=0,
+    is_active=True,
+    order=100
+)
+```
+
+Badge categories:
+- `milestone`: Entry counts, levels
+- `quality`: Attachments, outcomes
+- `consistency`: Streaks
+- `special`: Custom/seasonal badges
+
+### Manage Challenges
+Add or modify weekly challenges:
+
+```python
+from apps.gamification.models import ChallengeTemplate
+
+ChallengeTemplate.objects.create(
+    code='weekly_custom',
+    name='Custom Weekly Challenge',
+    description='Your challenge description',
+    goal_type='log_days',  # or 'attach_evidence', 'write_outcomes'
+    goal_target=5,
+    xp_reward=50,
+    recurrence='weekly',
+    is_active=True,
+    order=10
+)
+```
+
+Challenges reset every Monday (week start).
+
+### Manually Grant XP
+Admin can manually grant XP to users:
+
+```bash
+curl -X POST \
+  -H "Authorization: Token ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  http://localhost:8000/api/admin/gamification/grant/ \
+  -d '{
+    "user_id": 5,
+    "amount": 50,
+    "reason": "Exceptional contribution to project documentation"
+  }'
+```
+
+Returns:
+```json
+{
+  "success": true,
+  "user_id": 5,
+  "amount": 50,
+  "new_total": 450,
+  "new_level": 5,
+  "event_id": "event-uuid"
+}
+```
+
+### Manually Revoke Badge
+Remove badge from user (use with caution):
+
+```bash
+curl -X POST \
+  -H "Authorization: Token ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  http://localhost:8000/api/admin/gamification/revoke/ \
+  -d '{
+    "user_id": 5,
+    "badge_code": "streak_30",
+    "reason": "Badge awarded in error"
+  }'
+```
+
+Returns:
+```json
+{
+  "success": true,
+  "user_id": 5,
+  "badge_code": "streak_30",
+  "revoked_at": "2025-12-31T15:30:00Z"
+}
+```
+
+All manual actions are audited.
+
+### Detect Abuse
+Monitor XP events for suspicious patterns:
+
+```python
+from apps.gamification.models import XPEvent
+from django.utils import timezone
+from datetime import timedelta
+
+# Check for XP spikes
+recent = timezone.now() - timedelta(hours=1)
+spike_users = (
+    XPEvent.objects
+    .filter(created_at__gte=recent)
+    .values('user')
+    .annotate(total=models.Sum('amount'))
+    .filter(total__gt=100)  # > daily cap in 1 hour
+)
+
+# Check for rapid entry creation
+from apps.worklog.models import WorkLog
+rapid = (
+    WorkLog.objects
+    .filter(created_at__gte=recent)
+    .values('user')
+    .annotate(count=models.Count('id'))
+    .filter(count__gt=10)  # > max_entries_per_hour
+)
+```
+
+### Reset User Gamification Data
+If a user requests reset (use with caution):
+
+```python
+from apps.gamification.models import UserStreak, UserXP, XPEvent, UserBadge, UserChallenge
+
+user_id = 5
+
+# Delete all gamification data
+UserStreak.objects.filter(user_id=user_id).delete()
+UserXP.objects.filter(user_id=user_id).delete()
+XPEvent.objects.filter(user_id=user_id).delete()
+UserBadge.objects.filter(user_id=user_id).delete()
+UserChallenge.objects.filter(user_id=user_id).delete()
+
+# New records will be created on next worklog entry
+```
+
+### Quiet Mode
+Users can hide gamification UI via settings:
+
+```python
+from apps.gamification.models import GamificationSettings
+
+settings, _ = GamificationSettings.objects.get_or_create(user_id=user_id)
+settings.quiet_mode = True
+settings.save()
+```
+
+Frontend respects `quiet_mode` and hides widgets, but reward evaluation still runs.
+
 ## Monitoring & Observability
 
 ### Health Checks

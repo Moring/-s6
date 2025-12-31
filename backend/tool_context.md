@@ -139,6 +139,7 @@ def my_workflow(ctx, payload):
 2. `skills.extract` - Extract skills from work logs
 3. `report.generate` - Generate reports (status/standup)
 4. `resume.refresh` - Update resume from latest data
+5. `gamification.reward_evaluate` - Evaluate rewards on worklog changes
 
 ### 3. Agent
 
@@ -919,6 +920,222 @@ def parent_workflow(ctx, payload):
     # ✅ Chain jobs
     enqueue('child.workflow', payload, parent_job=ctx.job_id)
     return {'status': 'chained'}
+```
+
+---
+
+## Gamification Workflow: Reward Evaluation
+
+### Workflow: `gamification.reward_evaluate`
+
+**Location**: `apps/orchestration/workflows/reward_evaluate.py`
+
+**Purpose**: Evaluate and grant rewards (XP, badges, challenges) when a worklog entry is created or updated.
+
+**Trigger**: Automatically called by `apps/worklog/services.py` on entry create/update and attachment upload.
+
+**Payload**:
+```python
+{
+    'entry_id': int  # WorkLog ID
+}
+```
+
+**Returns**:
+```python
+{
+    'entry_id': int,
+    'job_id': str,
+    'valid': bool,                    # Entry passed validation
+    'xp_awarded': int,                # XP granted
+    'streak_updated': bool,           # Streak incremented
+    'streak': {
+        'current': int,
+        'longest': int,
+        'freeze_used': bool,
+        'broken': bool
+    },
+    'badges_awarded': list[str],      # Badge codes awarded
+    'challenges_updated': list[str],  # Challenge codes updated
+    'errors': list[str]               # Any errors encountered
+}
+```
+
+### Workflow Steps
+
+**Step 1: Load Entry**
+- Fetch WorkLog by `entry_id`
+- Validate user exists
+- Load reward configuration (RewardConfig model or defaults)
+
+**Step 2: Validate Meaningfulness**
+- Tool: `apps/gamification/tools/entry_validator.py::is_meaningful_entry()`
+- Checks:
+  - Minimum content length (20 chars)
+  - Not duplicate/spam (rate limits: max 10/hour, 60s between duplicates)
+  - Recent entries for abuse detection
+- Returns: `(bool, dict)` - valid flag + reasons
+
+**Step 3: Compute XP**
+- Tool: `apps/gamification/tools/xp_calculator.py::compute_xp()`
+- Inputs: entry, attachments_count, tags, config
+- Quality signals:
+  - Base entry: 10 XP
+  - Per attachment: 5 XP (max 3)
+  - Per tag: 3 XP (max 5)
+  - Length bonus: 10 XP (>= 200 chars)
+  - Outcome/impact fields: 15 XP
+  - Metrics present: 10 XP
+- Daily cap enforcement: max 200 XP/day
+- Returns: `{'total_xp': int, 'breakdown': dict, 'capped': bool}`
+
+**Step 4: Persist XP Event**
+- Tool: `apps/gamification/tools/persister.py::persist_events()`
+- Creates `XPEvent` with idempotency key: `xp:{user_id}:{entry_id}:{date}:{reason_hash}`
+- Updates `UserXP.total_xp`, `UserXP.daily_xp`, `UserXP.level`
+- Atomicity: uses transaction + unique constraint on idempotency_key
+
+**Step 5: Update Streak**
+- Tool: `apps/gamification/tools/streak_updater.py::update_streak()`
+- Logic:
+  - Same day: no change
+  - Consecutive day: increment `current_streak`
+  - Missed 1 day + freeze available: decrement `freezes_remaining`, keep streak
+  - Missed >1 day or no freeze: reset streak to 1
+  - Update `longest_streak` if `current_streak` exceeds it
+- Returns: new streak state
+
+**Step 6: Award Badges**
+- Tool: `apps/gamification/tools/badge_awarder.py::award_badges()`
+- Triggers checked:
+  - `first_entry`: worklog count == 1
+  - `streak_7/30/100`: current_streak threshold
+  - `total_entries_10/50/100`: worklog count threshold
+  - `first_attachment`: has_attachment && attachment_count == 1
+  - `level_5/10`: user level threshold
+- Idempotency key: `badge:{user_id}:{badge_code}`
+- Creates `UserBadge` with provenance: `{'job_id': ..., 'trigger': ..., 'threshold': ...}`
+- Returns: list of badge codes awarded
+
+**Step 7: Update Challenges**
+- Tool: `apps/gamification/tools/challenge_updater.py::update_challenges()`
+- Weekly challenges (Monday-Sunday):
+  - `log_days`: increment if unique date
+  - `attach_evidence`: increment if has_attachment
+  - `write_outcomes`: increment if has outcome/impact
+- Mark completed if `current_progress >= target_progress`
+- Award XP on completion (via XPEvent with idempotency)
+- Returns: list of challenge codes updated
+
+**Step 8: Emit Events**
+- Log observability events at each step:
+  - `log_event(ctx, "Validating entry", source='workflow.reward')`
+  - `log_event(ctx, "Awarded XP", source='workflow.reward', xp=10)`
+  - etc.
+
+### Anti-Gaming Protections
+
+**Idempotency**:
+- XPEvent uses unique idempotency key (prevents double XP on retries)
+- UserBadge has unique constraint on (user, badge)
+
+**Rate Limiting**:
+- Max 10 entries/hour per user
+- Min 60 seconds between entries (duplicate detection)
+- Daily XP cap: 200 XP
+
+**Quality Thresholds**:
+- Minimum 20 character content
+- Attachment bonuses capped (max 3)
+- Tag bonuses capped (max 5)
+
+**Streak Fairness**:
+- Streak freezes limited (3 total, earnable via perks)
+- Only 1 freeze applies per missed day
+- Micro-spam entries rejected by validation
+
+### Configuration
+
+**RewardConfig Model** (editable via Django admin):
+```python
+{
+    'min_entry_length': 20,
+    'max_entries_per_hour': 10,
+    'duplicate_threshold_seconds': 60,
+    'max_daily_xp': 200,
+    'xp_rules': {
+        'base_entry': 10,
+        'per_attachment': 5,
+        'per_tag': 3,
+        'length_bonus_threshold': 200,
+        'length_bonus': 10,
+        'outcome_bonus': 15,
+        'metrics_bonus': 10,
+        'agile_field_bonus': 5
+    },
+    'max_freezes': 3
+}
+```
+
+### Example Execution
+
+**Input**:
+```python
+payload = {'entry_id': 123}
+```
+
+**Flow**:
+1. Load WorkLog #123 (user: alice, date: 2025-12-31, content: 250 chars, 1 attachment, 2 tags, has outcome)
+2. Validate: ✅ valid (length OK, not spam, not duplicate)
+3. Compute XP: 10 (base) + 5 (attachment) + 6 (2 tags) + 10 (length) + 15 (outcome) = 46 XP
+4. Persist: XPEvent created, UserXP.total_xp += 46, level = 1 → 1 (no level up)
+5. Streak: yesterday logged → increment to 2 days
+6. Badges: Check `first_attachment` → already awarded, skip
+7. Challenges: Increment "log_days" (3/5), "write_outcomes" (2/3)
+8. Return: `{'xp_awarded': 46, 'streak': {'current': 2, ...}, 'badges_awarded': [], ...}`
+
+**Observability Events**:
+```
+[workflow.reward] Validating entry
+[workflow.reward] Computing XP
+[workflow.reward] Awarded 46 XP
+[workflow.reward] Updating streak
+[workflow.reward] Checking badges
+[workflow.reward] Updating challenges
+[workflow.reward] Reward evaluation completed: XP=46, badges=0, challenges=2
+```
+
+### Testing
+
+**Test Coverage** (`tests/test_gamification.py`):
+- Entry validation (valid, too short, rate limited)
+- XP calculation (base, bonuses, caps, daily limits)
+- Streak logic (first, consecutive, same day, freeze usage, broken)
+- Badge awarding (idempotency, thresholds)
+- Challenge progress (log days, completion, XP rewards)
+- Tenant isolation
+- Manual admin actions
+
+**Integration Test**:
+```python
+# Create worklog entry
+worklog = WorkLog.objects.create(user=user, date=today, content="Test" * 50)
+
+# Trigger reward evaluation (happens automatically via service)
+from apps.gamification.services import trigger_reward_evaluation
+job_id = trigger_reward_evaluation(worklog.id, user.id)
+
+# Wait for job completion
+job = Job.objects.get(id=job_id)
+assert job.status == 'success'
+
+# Verify XP awarded
+user.refresh_from_db()
+assert user.xp.total_xp > 0
+assert user.xp.daily_xp > 0
+
+# Verify streak updated
+assert user.streak.current_streak > 0
 ```
 
 ---
