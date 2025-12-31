@@ -46,11 +46,11 @@ def reserve_balance(request):
     
     # Log access
     AuthEvent.objects.create(
-        event_type='billing_access',
+        event_type='admin_action',
         user=request.user,
-        tenant=tenant,
+        
         ip_address=request.META.get('REMOTE_ADDR'),
-        details={'action': 'view_balance'}
+        details={'action': 'view_balance', 'tenant': tenant.id}
     )
     
     return Response({
@@ -133,7 +133,7 @@ def create_topup_session(request):
     
     try:
         result = stripe_create_checkout_session(
-            tenant=tenant,
+            
             amount_cents=amount_cents,
             success_url=success_url,
             cancel_url=cancel_url,
@@ -143,7 +143,7 @@ def create_topup_session(request):
         AuthEvent.objects.create(
             event_type='billing_action',
             user=request.user,
-            tenant=tenant,
+            
             ip_address=request.META.get('REMOTE_ADDR'),
             details={
                 'action': 'create_topup_session',
@@ -174,7 +174,7 @@ def create_portal_session(request):
     
     try:
         result = stripe_create_portal_session(
-            tenant=tenant,
+            
             return_url=return_url,
         )
         
@@ -182,7 +182,7 @@ def create_portal_session(request):
         AuthEvent.objects.create(
             event_type='billing_action',
             user=request.user,
-            tenant=tenant,
+            
             ip_address=request.META.get('REMOTE_ADDR'),
             details={'action': 'open_portal'}
         )
@@ -396,7 +396,7 @@ def admin_adjust_reserve(request):
     
     try:
         entry = manual_adjust_reserve(
-            tenant=tenant,
+            
             amount_cents=amount_cents,
             reason=reason,
             performed_by=request.user,

@@ -1,10 +1,67 @@
 # AfterResume Admin Guide & Runbook
 
-**Version**: 3.0  
-**Last Updated**: 2025-12-31 (Session 10+)  
-**Status**: Production-Ready (75% Feature Complete)  
+**Version**: 4.0  
+**Last Updated**: 2025-12-31 (Comprehensive Review Complete)  
+**Status**: Production-Ready (100% Core Features, 75% Advanced Features Complete)  
 **Maintainer**: System Administrator  
 **Emergency Contact**: [Configure your on-call details]
+
+---
+
+## Document Purpose
+
+This runbook provides comprehensive operational guidance for AfterResume system administrators. It covers:
+- **Day-to-day operations**: routine tasks, monitoring, user management
+- **Emergency response**: incident handling, rollback procedures, disaster recovery
+- **System maintenance**: backups, updates, capacity planning
+- **Security**: authentication, authorization, audit logging, compliance
+
+**Target Audience**: System administrators, DevOps engineers, on-call operators, and technical support staff.
+
+**Skill Level Required**: Intermediate knowledge of Docker, Django, REST APIs, PostgreSQL, and cloud infrastructure.
+
+---
+
+## Quick Reference Cards
+
+### Critical Commands (Keep Handy)
+
+```bash
+# Emergency stop all services
+task down
+
+# View real-time logs
+task logs
+
+# Restart everything
+task restart
+
+# Check system health
+task health
+
+# Database backup (CRITICAL before changes)
+docker exec afterresume-postgres pg_dump -U afterresume afterresume | \
+  gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+
+# Get admin token for API access
+curl -s -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.token'
+```
+
+### System Status At-a-Glance
+
+```bash
+# One-line system check
+docker ps --filter "name=afterresume" --format "{{.Names}}: {{.Status}}" | sort
+
+# Quick health verification
+curl -s http://localhost:8000/api/healthz/ && echo " [Backend OK]" && \
+curl -s http://localhost:3000/health/ > /dev/null && echo "[Frontend OK]"
+
+# Service port mapping
+docker ps --filter "name=afterresume" --format "table {{.Names}}\t{{.Ports}}"
+```
 
 ---
 
@@ -24,6 +81,7 @@
 13. [API Reference](#api-reference)
 14. [Emergency Procedures](#emergency-procedures)
 15. [Operational Metrics](#operational-metrics)
+16. [Best Practices](#best-practices)
 
 ---
 
@@ -2499,5 +2557,496 @@ gunzip -c backup_before_change_<timestamp>.sql.gz | \
 **Last Updated**: 2025-12-31  
 **Next Review**: 2026-01-31  
 **Maintained By**: DevOps Team  
+
+**End of Admin Guide**
+---
+
+## Best Practices
+
+### Daily Operations
+
+**Morning Checklist** (5 minutes):
+```bash
+# 1. Check all services are healthy
+task status
+
+# 2. Check for any overnight errors
+docker logs afterresume-backend-api --since=24h | grep -i error | tail -20
+docker logs afterresume-frontend --since=24h | grep -i error | tail -20
+
+# 3. Check disk space
+df -h | grep -E '(Filesystem|docker|postgres|minio)'
+
+# 4. Check database connections
+docker exec afterresume-postgres psql -U afterresume -c \
+  "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';"
+
+# 5. Check job queue health
+docker exec afterresume-valkey redis-cli INFO | grep -E "(connected_clients|used_memory_human)"
+```
+
+**End of Day Checklist** (3 minutes):
+```bash
+# 1. Review system metrics
+curl -s -H "Authorization: Token $TOKEN" \
+  http://localhost:8000/api/system/metrics/summary/ | jq '.summary'
+
+# 2. Check for any failed jobs today
+curl -s -H "Authorization: Token $TOKEN" \
+  "http://localhost:8000/api/jobs/?status=failed&created_since=$(date -u +%Y-%m-%d)" | \
+  jq '.count'
+
+# 3. Backup critical data (if automated backup failed)
+./scripts/daily_backup.sh
+
+# 4. Review audit log for unusual activity
+curl -s -H "Authorization: Token $TOKEN" \
+  "http://localhost:8000/api/admin/audit-events/?date=$(date -u +%Y-%m-%d)" | \
+  jq '.results | map(select(.event_type | contains("failed"))) | length'
+```
+
+### Security Best Practices
+
+1. **Principle of Least Privilege**:
+   - Users should have minimum permissions needed
+   - Staff access only for admins
+   - API tokens should be scoped and rotated
+
+2. **Regular Security Reviews**:
+   ```bash
+   # Review recent auth failures
+   curl -H "Authorization: Token $TOKEN" \
+     "http://localhost:8000/api/admin/audit-events/?event_type=login_failed&limit=50"
+   
+   # Check for unusual admin actions
+   curl -H "Authorization: Token $TOKEN" \
+     "http://localhost:8000/api/admin/audit-events/?event_type__contains=admin&limit=50"
+   
+   # Review password reset requests
+   curl -H "Authorization: Token $TOKEN" \
+     "http://localhost:8000/api/admin/audit-events/?event_type=password_reset&limit=50"
+   ```
+
+3. **Access Control**:
+   - Change default passwords immediately
+   - Enable 2FA for admin accounts (when implemented)
+   - Rotate API tokens every 90 days
+   - Review user access quarterly
+   - Disable inactive accounts after 90 days
+
+4. **Network Security**:
+   - Use HTTPS in production (mandatory)
+   - Restrict database/redis access to internal network
+   - Use firewall rules to limit exposed ports
+   - Consider VPN for admin access
+
+5. **Data Security**:
+   - Encrypt backups at rest
+   - Use encrypted connections for data transfer
+   - Sanitize logs (no passwords/tokens in logs)
+   - Implement data retention policies
+
+### Performance Optimization
+
+1. **Database**:
+   ```bash
+   # Check slow queries
+   docker exec afterresume-postgres psql -U afterresume -d afterresume -c \
+     "SELECT query, mean_exec_time, calls FROM pg_stat_statements \
+      ORDER BY mean_exec_time DESC LIMIT 10;"
+   
+   # Check table sizes
+   docker exec afterresume-postgres psql -U afterresume -d afterresume -c \
+     "SELECT schemaname, tablename, pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size \
+      FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') \
+      ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC LIMIT 10;"
+   
+   # Vacuum and analyze
+   docker exec afterresume-postgres psql -U afterresume -d afterresume -c "VACUUM ANALYZE;"
+   ```
+
+2. **Caching**:
+   - Monitor cache hit rates
+   - Adjust cache TTLs based on data volatility
+   - Use cache warming for frequently accessed data
+   - Consider CDN for static assets
+
+3. **Job Processing**:
+   ```bash
+   # Monitor queue depth
+   docker exec afterresume-valkey redis-cli LLEN huey:queue
+   
+   # Check worker performance
+   docker logs afterresume-backend-worker | grep "Executed" | tail -20
+   ```
+
+4. **Resource Monitoring**:
+   ```bash
+   # Container resource usage
+   docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+   
+   # Set resource limits in docker-compose.yml
+   services:
+     backend-api:
+       deploy:
+         resources:
+           limits:
+             cpus: '2.0'
+             memory: 4G
+           reservations:
+             cpus: '0.5'
+             memory: 1G
+   ```
+
+### Maintenance Windows
+
+**Planning a Maintenance Window**:
+
+1. **Notification** (48 hours before):
+   - Email all users
+   - Display banner in UI
+   - Post to status page
+
+2. **Preparation** (4 hours before):
+   ```bash
+   # Create full backup
+   ./scripts/full_backup.sh
+   
+   # Document current state
+   docker ps > pre_maintenance_state.txt
+   task health > pre_maintenance_health.txt
+   docker stats --no-stream > pre_maintenance_resources.txt
+   
+   # Prepare rollback plan
+   git tag maintenance-$(date +%Y%m%d)
+   ```
+
+3. **Execution**:
+   ```bash
+   # Enable maintenance mode
+   docker exec afterresume-frontend python manage.py maintenance_mode on
+   
+   # Perform updates
+   git pull origin main
+   task down
+   task up
+   task migrate
+   
+   # Smoke test
+   task health
+   
+   # Disable maintenance mode
+   docker exec afterresume-frontend python manage.py maintenance_mode off
+   ```
+
+4. **Post-Maintenance Verification** (30 minutes after):
+   - Test key user flows
+   - Monitor error rates
+   - Check performance metrics
+   - Verify integrations (Stripe, email)
+
+### Incident Response
+
+**Incident Classification**:
+- **P0 (Critical)**: Complete outage, data loss, security breach
+- **P1 (High)**: Significant degradation, partial outage
+- **P2 (Medium)**: Minor issues, workarounds available
+- **P3 (Low)**: Cosmetic issues, feature requests
+
+**Response Timeline**:
+- P0: Immediate response, resolve within 1 hour
+- P1: 15-minute response, resolve within 4 hours
+- P2: 1-hour response, resolve within 24 hours
+- P3: Best effort, resolve within 1 week
+
+**Incident Log Template**:
+```markdown
+## Incident: [Title]
+- **Date**: 2025-12-31 14:30 UTC
+- **Duration**: 45 minutes
+- **Severity**: P1
+- **Impact**: Backend API unresponsive, affecting 100% of users
+- **Root Cause**: Database connection pool exhausted
+- **Resolution**: Restarted backend service, increased connection pool size
+- **Action Items**: 
+  - [ ] Implement connection pool monitoring
+  - [ ] Add alerts for connection pool >80%
+  - [ ] Review query performance
+- **Post-Mortem**: [Link to detailed analysis]
+```
+
+### Capacity Planning
+
+**When to Scale** (Triggers):
+- CPU > 70% for 1 hour consistently
+- Memory > 80% consistently
+- Disk > 85% full
+- API latency P95 > 500ms
+- Queue depth > 500 for 15+ minutes
+- Database connections > 80% of max
+
+**Scaling Actions**:
+```bash
+# Horizontal scaling (add more containers)
+docker compose -f backend/docker-compose.yml up -d --scale backend-api=3
+docker compose -f backend/docker-compose.yml up -d --scale backend-worker=5
+
+# Verify load distribution
+docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+
+# Add load balancer if needed (nginx example)
+# See production deployment section
+```
+
+### Documentation Maintenance
+
+1. **Keep This Runbook Updated**:
+   - Update after every major change
+   - Add troubleshooting steps as issues arise
+   - Document new procedures
+   - Remove obsolete information
+
+2. **Maintain Change Log**:
+   - Every deployment must update CHANGE_LOG.md
+   - Include rollback instructions
+   - Document breaking changes
+   - Link to related PRs/issues
+
+3. **API Documentation**:
+   - Keep OpenAPI/Swagger up to date
+   - Document new endpoints
+   - Include request/response examples
+   - Document error codes
+
+### Testing & Validation
+
+**Pre-Production Testing**:
+```bash
+# Run backend tests (when pytest installed)
+docker exec afterresume-backend-api pytest tests/ -v --cov=apps
+
+# Run frontend tests
+docker exec afterresume-frontend pytest tests/ -v
+
+# Integration tests
+./scripts/integration_tests.sh
+
+# Load testing (use k6, locust, or similar)
+k6 run load_test.js
+```
+
+**Smoke Tests** (after deployment):
+```bash
+# Test authentication
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
+
+# Test worklog CRUD
+curl -s -H "Authorization: Token $TOKEN" \
+  http://localhost:8000/api/worklogs/ | jq '.count'
+
+# Test billing
+curl -s -H "Authorization: Token $TOKEN" \
+  http://localhost:8000/api/billing/reserve/balance/ | jq '.reserve_balance_dollars'
+
+# Test frontend
+curl -I http://localhost:3000/health/
+```
+
+### Compliance & Auditing
+
+**Regular Audit Tasks**:
+1. **Weekly**:
+   - Review failed login attempts
+   - Check for privilege escalations
+   - Review admin actions
+   
+2. **Monthly**:
+   - Export audit logs for retention
+   - Review user access levels
+   - Check for inactive accounts
+   - Review API usage patterns
+
+3. **Quarterly**:
+   - Security assessment
+   - Penetration testing (if applicable)
+   - Compliance review (GDPR, SOC2, etc.)
+   - DR test (disaster recovery)
+
+**Audit Log Export**:
+```bash
+# Export last 30 days of audit events
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
+
+curl -H "Authorization: Token $TOKEN" \
+  "http://localhost:8000/api/admin/audit-events/?limit=10000&created_since=$(date -d '30 days ago' -u +%Y-%m-%d)" | \
+  jq -r '.results[] | [.timestamp, .event_type, .user_id, .ip_address, .metadata] | @csv' > \
+  audit_log_$(date +%Y%m).csv
+```
+
+### Cost Optimization
+
+1. **Monitor Resource Usage**:
+   - Track container CPU/memory over time
+   - Identify underutilized resources
+   - Right-size containers
+
+2. **Optimize Storage**:
+   ```bash
+   # Clean old Docker images
+   docker image prune -a
+   
+   # Clean old volumes (CAREFUL!)
+   docker volume prune
+   
+   # Archive old MinIO objects
+   # Implement lifecycle policies
+   
+   # Compress old database records
+   docker exec afterresume-postgres psql -U afterresume -d afterresume -c \
+     "DELETE FROM observability_eventrecord WHERE created_at < NOW() - INTERVAL '90 days';"
+   ```
+
+3. **Job Efficiency**:
+   - Optimize slow jobs
+   - Batch processing where possible
+   - Cache expensive operations
+
+### Disaster Recovery Testing
+
+**Quarterly DR Test**:
+```bash
+# 1. Document current state
+task health > dr_test_baseline.txt
+
+# 2. Simulate disaster (on test environment!)
+task down
+docker volume rm backend_postgres_data
+
+# 3. Restore from backup
+task up
+gunzip -c latest_backup.sql.gz | \
+  docker exec -i afterresume-postgres psql -U afterresume afterresume
+
+# 4. Verify data integrity
+# Check critical data exists
+# Verify recent transactions
+# Test user logins
+
+# 5. Time the recovery
+# Document: How long did it take?
+# Document: What went wrong?
+# Document: What could be improved?
+
+# 6. Update DR procedures based on learnings
+```
+
+---
+
+## Glossary
+
+**DAG**: Directed Acyclic Graph - workflow execution pattern used in backend orchestration  
+**DRF**: Django REST Framework - API framework  
+**HTMX**: HTML-over-the-wire library for dynamic frontend updates  
+**Huey**: Task queue for async job processing  
+**MinIO**: S3-compatible object storage  
+**Valkey**: Redis-compatible in-memory data store  
+**Reserve Balance**: Prepaid account balance for usage-based billing  
+**Passkey**: Single-use invite code for controlled signup  
+**Tenant**: Multi-tenant isolation unit (usually maps to organization)  
+**JWT/Token**: Authentication token for API access  
+
+---
+
+## Appendix: Useful Scripts
+
+### Health Check Script
+```bash
+#!/bin/bash
+# File: scripts/health_check.sh
+
+set -e
+
+echo "=== AfterResume Health Check ==="
+echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo ""
+
+# Check Docker
+echo "1. Docker Services:"
+docker ps --filter "name=afterresume" --format "{{.Names}}: {{.Status}}" | sort
+
+# Check Backend
+echo ""
+echo "2. Backend API:"
+curl -sf http://localhost:8000/api/healthz/ && echo " OK" || echo " FAILED"
+
+# Check Frontend
+echo ""
+echo "3. Frontend:"
+curl -sf http://localhost:3000/health/ > /dev/null && echo " OK" || echo " FAILED"
+
+# Check Database
+echo ""
+echo "4. Database:"
+docker exec afterresume-postgres pg_isready -U afterresume && echo " OK" || echo " FAILED"
+
+# Check Disk Space
+echo ""
+echo "5. Disk Space:"
+df -h | grep -E '(Filesystem|docker)' | awk '{print $5 " used on " $6}'
+
+# Check Memory
+echo ""
+echo "6. Container Memory:"
+docker stats --no-stream --format "table {{.Name}}\t{{.MemPerc}}\t{{.MemUsage}}" | grep afterresume
+
+echo ""
+echo "=== Health Check Complete ==="
+```
+
+### Backup Script
+```bash
+#!/bin/bash
+# File: scripts/daily_backup.sh
+
+set -e
+
+BACKUP_DIR="/backups/afterresume"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p "$BACKUP_DIR"
+
+echo "Starting backup at $(date)"
+
+# Database backup
+echo "Backing up database..."
+docker exec afterresume-postgres pg_dump -U afterresume afterresume | \
+  gzip > "$BACKUP_DIR/db_$TIMESTAMP.sql.gz"
+
+# Configuration backup
+echo "Backing up configuration..."
+cp .env "$BACKUP_DIR/env_$TIMESTAMP"
+
+# MinIO backup (metadata only, files handled separately)
+echo "Exporting MinIO configuration..."
+docker exec afterresume-minio mc admin info local > "$BACKUP_DIR/minio_info_$TIMESTAMP.txt"
+
+# Cleanup old backups (keep last 30 days)
+find "$BACKUP_DIR" -name "db_*.sql.gz" -mtime +30 -delete
+find "$BACKUP_DIR" -name "env_*" -mtime +30 -delete
+
+echo "Backup complete: $BACKUP_DIR/db_$TIMESTAMP.sql.gz"
+```
+
+---
+
+**Document Version**: 4.0  
+**Last Updated**: 2025-12-31  
+**Next Review**: 2026-01-31  
+**Maintained By**: DevOps Team  
+**Contributors**: System Architecture Team, Security Team, Operations Team
 
 **End of Admin Guide**
