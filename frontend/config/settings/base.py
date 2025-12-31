@@ -30,6 +30,12 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.ui',
     'apps.api_proxy',
+    'apps.worklog',
+    'apps.skills',
+    'apps.reporting',
+    'apps.billing',
+    'apps.admin_panel',
+    'apps.system',
 ]
 
 MIDDLEWARE = [

@@ -8,6 +8,7 @@ app_name = 'ui'
 
 urlpatterns = [
     path('', views.index, name='home'),
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('upload/', views.upload_file, name='upload_file'),
     path('health/', views.health, name='health'),
     path('jobs/', views.jobs_list, name='jobs_list'),

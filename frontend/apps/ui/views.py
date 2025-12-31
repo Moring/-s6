@@ -9,10 +9,18 @@ from apps.api_proxy.services import get_backend_health, get_dashboard_data, get_
 from apps.api_proxy.client import get_backend_client
 
 
-@login_required
 @require_http_methods(["GET"])
 def index(request):
-    """Homepage showing dashboard with system overview."""
+    """Public homepage - redirects to dashboard if logged in."""
+    if request.user.is_authenticated:
+        return redirect('ui:dashboard')
+    return redirect('account_login')
+
+
+@login_required
+@require_http_methods(["GET"])
+def dashboard(request):
+    """Main dashboard showing system overview."""
     health = get_backend_health()
     dashboard = get_dashboard_data()
     
