@@ -20,6 +20,7 @@ def execute_job(job_id: str):
     3. Executes the workflow
     4. Stores results
     5. Handles errors and retries
+    6. Releases concurrency slots
     """
     from apps.jobs.models import Job
     from apps.jobs.registry import get_workflow
@@ -27,12 +28,22 @@ def execute_job(job_id: str):
     from apps.jobs.dispatcher import enqueue
     from apps.observability.context import ExecutionContext
     from apps.observability.services import log_event
+    from apps.tenants.quotas import ConcurrencyLimiter
+    from apps.tenants.models import Tenant
     
     try:
         job = Job.objects.get(id=job_id)
     except Job.DoesNotExist:
         logger.error(f"Job {job_id} not found")
         return
+    
+    # Get tenant for concurrency release
+    tenant = None
+    if job.user:
+        try:
+            tenant = Tenant.objects.get(owner=job.user)
+        except Tenant.DoesNotExist:
+            pass
     
     # Create execution context
     ctx = ExecutionContext.from_job(job)
@@ -59,6 +70,11 @@ def execute_job(job_id: str):
         
         log_event(ctx, f"Job completed successfully", level='info', source='worker')
         
+        # Release concurrency slot on success
+        if tenant:
+            concurrency_limiter = ConcurrencyLimiter(tenant, job.type)
+            concurrency_limiter.release(str(job.id))
+        
     except Exception as e:
         logger.exception(f"Job {job_id} failed")
         
@@ -84,6 +100,8 @@ def execute_job(job_id: str):
                 retry_delay_seconds=delay.total_seconds()
             )
             
+            # Do NOT release concurrency slot - it stays acquired for retry
+            
             enqueue(
                 job_type=job.type,
                 payload=job.payload,
@@ -91,7 +109,9 @@ def execute_job(job_id: str):
                 user=job.user,
                 parent_job=job.parent_job,
                 scheduled_for=scheduled_for,
-                max_retries=job.max_retries
+                max_retries=job.max_retries,
+                enforce_quotas=False,  # Don't re-check quotas on retry
+                enforce_concurrency=False  # Slot already held
             )
         else:
             job.status = 'failed'
@@ -104,3 +124,9 @@ def execute_job(job_id: str):
                 source='worker',
                 error=str(e)
             )
+            
+            # Release concurrency slot on permanent failure
+            if tenant:
+                concurrency_limiter = ConcurrencyLimiter(tenant, job.type)
+                concurrency_limiter.release(str(job.id))
+
