@@ -226,3 +226,123 @@ class ActivationEvent(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.event_type} @ {self.timestamp:%Y-%m-%d %H:%M}"
+
+
+# Privacy control models for Phase 4
+class PrivacyConsent(models.Model):
+    """
+    User privacy consent settings.
+    Controls how user data can be used for AI processing and other purposes.
+    """
+    
+    CONSENT_TYPES = [
+        ('ai_context', 'Use data as AI context'),
+        ('analytics', 'Usage analytics'),
+        ('product_improvements', 'Product improvements'),
+        ('marketing', 'Marketing communications'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='privacy_consents')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='privacy_consents')
+    consent_type = models.CharField(max_length=50, choices=CONSENT_TYPES)
+    granted = models.BooleanField(default=False)
+    granted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'system_privacy_consent'
+        unique_together = [('user', 'tenant', 'consent_type')]
+        indexes = [
+            models.Index(fields=['user', 'tenant', 'consent_type']),
+            models.Index(fields=['tenant', 'consent_type', 'granted']),
+        ]
+    
+    def __str__(self):
+        status = "granted" if self.granted else "revoked"
+        return f"{self.user.username} - {self.consent_type}: {status}"
+    
+    def grant(self):
+        """Grant consent."""
+        self.granted = True
+        self.granted_at = timezone.now()
+        self.revoked_at = None
+        self.save()
+    
+    def revoke(self):
+        """Revoke consent."""
+        self.granted = False
+        self.revoked_at = timezone.now()
+        self.save()
+
+
+class DocumentPrivacySettings(models.Model):
+    """
+    Per-document privacy settings.
+    Controls whether specific documents can be used as AI context.
+    """
+    
+    artifact = models.OneToOneField(
+        'artifacts.Artifact',
+        on_delete=models.CASCADE,
+        related_name='privacy_settings'
+    )
+    allow_ai_context = models.BooleanField(
+        default=True,
+        help_text='Allow this document to be used as AI context'
+    )
+    allow_indexing = models.BooleanField(
+        default=True,
+        help_text='Allow this document to be indexed for search'
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='document_privacy_updates'
+    )
+    
+    class Meta:
+        db_table = 'system_document_privacy'
+        verbose_name = 'Document Privacy Setting'
+        verbose_name_plural = 'Document Privacy Settings'
+    
+    def __str__(self):
+        return f"Privacy: {self.artifact.filename} - AI: {self.allow_ai_context}"
+
+
+class EntryPrivacySettings(models.Model):
+    """
+    Per-entry privacy settings for worklog entries.
+    Controls whether specific entries can be used as AI context.
+    """
+    
+    worklog_entry = models.OneToOneField(
+        'worklog.WorkLog',
+        on_delete=models.CASCADE,
+        related_name='privacy_settings'
+    )
+    allow_ai_context = models.BooleanField(
+        default=True,
+        help_text='Allow this entry to be used as AI context'
+    )
+    exclude_from_exports = models.BooleanField(
+        default=False,
+        help_text='Exclude from data exports'
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='entry_privacy_updates'
+    )
+    
+    class Meta:
+        db_table = 'system_entry_privacy'
+        verbose_name = 'Entry Privacy Setting'
+        verbose_name_plural = 'Entry Privacy Settings'
+    
+    def __str__(self):
+        return f"Privacy: Entry {self.worklog_entry.id} - AI: {self.allow_ai_context}"
