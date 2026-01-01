@@ -4,6 +4,7 @@ Health check endpoints.
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.conf import settings
 from django.db import connection
 from apps.storage.minio import get_minio_client
 
@@ -30,21 +31,23 @@ def readyz(request):
         checks['database'] = f'error: {str(e)}'
     
     # MinIO check
-    try:
-        minio_client = get_minio_client()
-        if minio_client.health_check():
-            checks['minio'] = 'ok'
-        else:
-            checks['minio'] = 'error: bucket not accessible'
-    except Exception as e:
-        checks['minio'] = f'error: {str(e)}'
+    if getattr(settings, 'MINIO_HEALTHCHECK_SKIP', False):
+        checks['minio'] = 'skipped'
+    else:
+        try:
+            minio_client = get_minio_client()
+            if minio_client.health_check():
+                checks['minio'] = 'ok'
+            else:
+                checks['minio'] = 'error: bucket not accessible'
+        except Exception as e:
+            checks['minio'] = f'error: {str(e)}'
     
     # Overall status
-    all_ok = all(v == 'ok' for v in checks.values())
+    all_ok = all(v in ['ok', 'skipped'] for v in checks.values())
     status_code = 200 if all_ok else 503
     
     return Response({
         'status': 'ready' if all_ok else 'not_ready',
         'checks': checks
     }, status=status_code)
-

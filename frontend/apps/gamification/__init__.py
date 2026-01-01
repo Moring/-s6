@@ -1,1 +1,0 @@
-"""Gamification frontend app."""

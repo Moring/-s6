@@ -1,54 +1,13 @@
+version: '3.9'
+
 services:
   frontend:
-    build: .
-    container_name: afterresume-frontend
-    command: sh -c "python manage.py migrate --no-input && python manage.py runserver 0.0.0.0:3000"
+    build:
+      context: .
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "3000:3000"
     env_file:
-      - ../.env
+      - ../dokploy.env
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-frontend-dev-key}
-      - DJANGO_ALLOWED_HOSTS=*,localhost,127.0.0.1
-      - BACKEND_BASE_URL=${BACKEND_BASE_URL:-http://backend-api:8000}
-      - VALKEY_HOST=valkey
-      - VALKEY_PORT=6379
-    volumes:
-      - .:/app
-      - frontend_static:/app/staticfiles
-    depends_on:
-      valkey:
-        condition: service_healthy
-    networks:
-      - afterresume-net
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/health/')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  valkey:
-    image: valkey/valkey:latest
-    container_name: afterresume-valkey-frontend
-    ports:
-      - "6380:6379"
-    volumes:
-      - valkey_data:/data
-    networks:
-      - afterresume-net
-    healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-volumes:
-  frontend_static:
-  valkey_data:
-
-networks:
-  afterresume-net:
-    external: true
+      BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend-api:8000}
+      SERVICE_TO_SERVICE_SECRET: ${SERVICE_TO_SERVICE_SECRET}

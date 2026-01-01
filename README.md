@@ -1,6 +1,6 @@
 # AfterResume - Complete System
 
-AI-powered work tracking and resume generation system with Django backend + HTMX frontend, running in Docker.
+AI-powered work tracking and resume generation system with Django backend + Vue2 SPA frontend, running in Docker.
 
 **Status**: ✅ Production-Ready Core (100% Core Features, 75% Advanced Features)  
 **Version**: 1.0.0  
@@ -14,7 +14,7 @@ AI-powered work tracking and resume generation system with Django backend + HTMX
 - ✅ **Worklog management** - Track work entries with rich metadata
 - ✅ **Billing system** - Stripe integration with reserve balances
 - ✅ **Admin dashboards** - User management, billing, and metrics
-- ✅ **Real-time status** - Live updates via HTMX polling
+- ✅ **Real-time status** - Live updates via API polling
 - ✅ **Job processing** - Async background tasks with Huey
 - ✅ **Object storage** - MinIO for file uploads and artifacts
 - ✅ **Comprehensive audit** - Full event logging for compliance
@@ -37,6 +37,9 @@ task bootstrap
 # MinIO Console: http://localhost:9001
 ```
 
+Note: The Vue2 SPA frontend is built in `frontend/` (see `frontend/README.md`). Docker compose tasks for the
+legacy Django frontend need updates to run the Node proxy in containers.
+
 ## 📦 System Architecture
 
 ```
@@ -44,7 +47,7 @@ task bootstrap
 │                  AfterResume System                     │
 │                                                         │
 │  Frontend (Port 3000)          Backend (Port 8000)     │
-│  ├─ Django + HTMX UI           ├─ Django + DRF API     │
+│  ├─ Vue2 SPA + Node Proxy      ├─ Django + DRF API     │
 │  ├─ Valkey Cache               ├─ Postgres Database    │
 │  └─ API Proxy Client           ├─ Valkey Queue         │
 │                                 ├─ MinIO Storage        │
@@ -63,7 +66,7 @@ task bootstrap
 
 | Service | Port | Description |
 |---------|------|-------------|
-| Frontend | 3000 | Web UI (Django + HTMX) |
+| Frontend | 3000 | Web UI (Vue2 SPA) |
 | Backend API | 8000 | REST API (Django + DRF) |
 | Postgres | 5432 | Primary database |
 | Valkey (Backend) | 6379 | Job queue |
@@ -141,7 +144,7 @@ task test-frontend    # Run frontend tests
 │   ├── docker-compose.yml
 │   └── SYSTEM_DESIGN.md        # Detailed architecture
 │
-├── frontend/                   # Frontend Django application
+├── frontend/                   # Frontend Vue2 SPA
 │   ├── apps/
 │   │   ├── ui/                 # Web UI views
 │   │   └── api_proxy/          # Backend API client
@@ -263,7 +266,7 @@ task test-backend     # Run tests
 ### 2. Make Frontend Changes
 
 ```bash
-# Edit code in frontend/apps/
+# Edit code in frontend/src/
 task restart          # Restart to apply changes  
 task logs-frontend    # Watch logs
 ```

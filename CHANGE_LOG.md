@@ -6490,3 +6490,70 @@ curl http://localhost:8000/api/gamification/badges/ \
 **Breaking Changes:** ❌ None  
 **Pytest Status:** ✅ All 24 tests passing
 
+---
+
+## 2026-01-01 - Vue2 Chat-First SPA Frontend
+
+### Summary
+Built a Vue2 single-page app in `frontend/` with a chat-first workflow, proxying all `/api/*` requests to the backend. The UI uses the Seed Vue template assets, a split chat/canvas layout, and a footer status bar that refreshes reserve and token summaries via `/api/status/bar/`.
+
+### ✅ What Changed
+
+#### 1. Vue2 SPA Skeleton + Theme Assets
+- Migrated the root Vue Seed template into `frontend/` and converted it to Vue2 + Vite.
+- Added a split chat/canvas layout with an animated, branded theme in `frontend/src/App.vue`.
+- Created `ChatPanel`, `CanvasPanel`, and `FooterBar` components to enforce chat-first UX.
+
+#### 2. Chat Auth + Admin Command Flow
+- Implemented login/signup/logout state machine with strict no-enumeration messaging.
+- Added admin command parsing for passkeys, user search, enable/disable, password reset, and profile updates.
+- Added canvas renderers for dashboard, auth errors, admin results, and authorization states.
+
+#### 3. API Client + Proxy
+- Added a central API client with CSRF handling and ETag support.
+- Implemented Vite dev proxy + Node production proxy to inject `X-Service-Token`.
+
+#### 4. Tests + Backend Test Settings
+- Added frontend unit tests for auth flow, command parsing, API errors, and no-enumeration messages.
+- Updated backend test settings to use LocMem cache and skip MinIO readiness checks.
+
+### 🔧 Configuration Changes
+- **Frontend proxy**: set `BACKEND_ORIGIN` (or `VITE_BACKEND_ORIGIN` for dev) in `dokploy.env`.
+- **Service auth**: set `SERVICE_TO_SERVICE_SECRET` in `dokploy.env` for `X-Service-Token`.
+- **Tests only**: `MINIO_HEALTHCHECK_SKIP=True` in `backend/config/settings/test.py`.
+
+### ✅ How to Verify Locally
+
+```bash
+# Frontend
+cd frontend
+npm install
+npm test
+npm run lint
+npm run build
+
+# Backend tests
+cd ../backend
+../.venv/bin/pytest
+
+# Run the frontend proxy server
+cd ../frontend
+npm run start
+```
+
+### ⚠️ Risks and Assumptions
+- Session token count is a placeholder (0) until the backend exposes per-session token usage.
+- Signup email is derived from username when no email is provided; may need a dedicated prompt.
+- Docker compose/Taskfile references still point to the legacy Django frontend container.
+
+### 📝 Human TODOs
+- [ ] Set `BACKEND_ORIGIN` and `SERVICE_TO_SERVICE_SECRET` in `dokploy.env`.
+- [ ] Update Docker Compose + Taskfile to run the Vue2 Node proxy frontend.
+- [ ] Decide on a backend session-token summary field and wire it into `/api/status/bar/`.
+- [ ] Add a chat prompt for signup email if required by policy.
+- [ ] Validate production CSP/security headers with the new proxy.
+
+**Migration Required:** ❌ No  
+**Config Changes Required:** ✅ Yes (dokploy.env values for frontend proxy + service token)  
+**Breaking Changes:** ⚠️ Frontend stack now Vue2 SPA (update deployment config)  
+**Pytest Status:** ✅ 129 tests passing

@@ -6,7 +6,7 @@ AfterResume is a multi-tenant SaaS platform for managing work logs, skills track
 ## Service Architecture
 
 ### Service Boundaries
-- **Frontend**: Django + HTMX UI (presentation + sessions only)
+- **Frontend**: Vue2 SPA + Node proxy (presentation + sessions only)
 - **Backend**: Django + DRF orchestration service (AI workflows, persistence, storage, jobs, observability)
 - **Manager**: Dokploy (deployment control plane)
 

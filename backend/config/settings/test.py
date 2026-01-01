@@ -20,6 +20,16 @@ HUEY = {
     'consumer': {'workers': 1, 'worker_type': 'thread'},
 }
 
+# Use local memory cache to avoid external services in tests.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
+# Skip MinIO checks in readyz during tests.
+MINIO_HEALTHCHECK_SKIP = True
+
 # Use fake LLM
 LLM_PROVIDER = 'local'
 

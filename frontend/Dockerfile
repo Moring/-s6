@@ -1,21 +1,23 @@
-FROM python:latest
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy requirements
-COPY pyproject.toml /app/
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install dependencies
-RUN pip install --no-cache-dir django django-htmx django-redis requests python-dotenv django-allauth
+COPY . .
+RUN npm run build
 
-# Copy application
-COPY . /app/
+FROM node:20-alpine
 
-# Create staticfiles directory
-RUN mkdir -p /app/staticfiles
+WORKDIR /app
+ENV NODE_ENV=production
 
-# Expose port
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server ./server
+
 EXPOSE 3000
-
-# Default command
-CMD ["python", "manage.py", "runserver", "0.0.0.0:3000"]
+CMD ["node", "server/index.js"]
