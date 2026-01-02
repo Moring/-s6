@@ -11,3 +11,17 @@ services:
     environment:
       BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend-api:8000}
       SERVICE_TO_SERVICE_SECRET: ${SERVICE_TO_SERVICE_SECRET}
+
+  # Production static frontend served by nginx (builds the app and serves /dist)
+  frontend_prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend:8000}
+    ports:
+      - "80:80"
+    env_file:
+      - ../dokploy.env
+    environment:
+      SERVICE_TO_SERVICE_SECRET: ${SERVICE_TO_SERVICE_SECRET}
