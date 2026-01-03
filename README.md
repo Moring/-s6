@@ -1,6 +1,6 @@
 # AfterResume - Complete System
 
-AI-powered work tracking and resume generation system with Django backend + Vue2 SPA frontend, running in Docker.
+AI-powered work tracking and resume generation system with Django + DRF backend and a Vue SPA frontend (Node-based build/runtime), running in Docker.
 
 **Status**: ✅ Production-Ready Core (100% Core Features, 75% Advanced Features)  
 **Version**: 1.0.0  
@@ -10,7 +10,7 @@ AI-powered work tracking and resume generation system with Django backend + Vue2
 
 - ✅ **Multi-tenant SaaS** - Complete tenant isolation with user profiles
 - ✅ **Invite-only signup** - Secure passkey-based onboarding
-- ✅ **Token authentication** - Secure API access with audit logging
+- ✅ **JWT authentication** - Short-lived access tokens + refresh cookies
 - ✅ **Worklog management** - Track work entries with rich metadata
 - ✅ **Billing system** - Stripe integration with reserve balances
 - ✅ **Admin dashboards** - User management, billing, and metrics
@@ -37,8 +37,11 @@ task bootstrap
 # MinIO Console: http://localhost:9001
 ```
 
-Note: The Vue2 SPA frontend is built in `frontend/` (see `frontend/README.md`). Docker compose tasks for the
-legacy Django frontend need updates to run the Node proxy in containers.
+Note: The Vue SPA frontend is built in `frontend/` (see `frontend/README.md`). The frontend container serves the SPA
+and proxies `/api/*` to the backend with service auth.
+
+Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT access token in memory, and refreshes via
+`/api/auth/token/refresh/` using an HttpOnly refresh cookie.
 
 ## 📦 System Architecture
 
@@ -47,9 +50,9 @@ legacy Django frontend need updates to run the Node proxy in containers.
 │                  AfterResume System                     │
 │                                                         │
 │  Frontend (Port 3000)          Backend (Port 8000)     │
-│  ├─ Vue2 SPA + Node Proxy      ├─ Django + DRF API     │
-│  ├─ Valkey Cache               ├─ Postgres Database    │
-│  └─ API Proxy Client           ├─ Valkey Queue         │
+│  ├─ Vue SPA + Node runtime     ├─ Django + DRF API     │
+│  ├─ SPA assets + /api proxy    ├─ Postgres Database    │
+│  └─ X-Service-Token injection  ├─ Valkey Queue         │
 │                                 ├─ MinIO Storage        │
 │                                 ├─ Huey Workers         │
 │                                 └─ AI Agents + LLM      │
@@ -66,11 +69,10 @@ legacy Django frontend need updates to run the Node proxy in containers.
 
 | Service | Port | Description |
 |---------|------|-------------|
-| Frontend | 3000 | Web UI (Vue2 SPA) |
+| Frontend | 3000 | Web UI (Vue SPA, Node-based) |
 | Backend API | 8000 | REST API (Django + DRF) |
 | Postgres | 5432 | Primary database |
 | Valkey (Backend) | 6379 | Job queue |
-| Valkey (Frontend) | 6380 | Session/cache |
 | MinIO | 9000 | Object storage |
 | MinIO Console | 9001 | Storage admin UI |
 
@@ -110,7 +112,6 @@ task bootstrap       # Migrate + seed
 
 ```bash
 task shell-backend    # Django shell (backend)
-task shell-frontend   # Django shell (frontend)
 task bash-backend     # Bash in backend container
 task bash-frontend    # Bash in frontend container
 ```
@@ -119,7 +120,7 @@ task bash-frontend    # Bash in frontend container
 
 ```bash
 task test-backend     # Run backend tests
-task test-frontend    # Run frontend tests
+cd frontend && npm test
 ```
 
 ## 🏗️ Project Structure
@@ -144,12 +145,13 @@ task test-frontend    # Run frontend tests
 │   ├── docker-compose.yml
 │   └── SYSTEM_DESIGN.md        # Detailed architecture
 │
-├── frontend/                   # Frontend Vue2 SPA
-│   ├── apps/
-│   │   ├── ui/                 # Web UI views
-│   │   └── api_proxy/          # Backend API client
+├── frontend/                   # Frontend Vue SPA
+│   ├── src/                    # Vue app source
+│   ├── server/                 # Node runtime + /api proxy
 │   ├── Dockerfile
-│   └── docker-compose.yml
+│   ├── Dockerfile.prod
+│   ├── docker-compose.yml
+│   └── nginx.conf
 │
 ├── .env.example                # Environment template
 ├── Taskfile.yml                # Task definitions
@@ -160,10 +162,9 @@ task test-frontend    # Run frontend tests
 
 ### Frontend (http://localhost:3000)
 
-- `/` - Dashboard
-- `/jobs/` - Job list
-- `/jobs/{id}/` - Job detail
-- `/health/` - Health check
+- `/` - Vue SPA entrypoint (client-side routing)
+- `/healthz` - Health check
+- `/api/*` - Proxied to backend API
 
 ### Backend (http://localhost:8000)
 
@@ -202,8 +203,12 @@ POSTGRES_DB=afterresume
 POSTGRES_USER=afterresume
 POSTGRES_PASSWORD=afterresume
 
-# Backend API URL (for frontend)
+# Backend API URL (internal)
 BACKEND_BASE_URL=http://backend-api:8000
+
+# Frontend runtime (Node proxy)
+BACKEND_ORIGIN=http://backend-api:8000
+SERVICE_TO_SERVICE_SECRET=change-me
 
 # LLM Provider
 LLM_PROVIDER=local  # 'local' for fake provider, 'vllm' for real
@@ -235,7 +240,7 @@ task health
 
 # Direct curl
 curl http://localhost:8000/api/healthz/
-curl http://localhost:3000/health/
+curl http://localhost:3000/healthz
 ```
 
 ### View Logs
@@ -267,8 +272,9 @@ task test-backend     # Run tests
 
 ```bash
 # Edit code in frontend/src/
-task restart          # Restart to apply changes  
-task logs-frontend    # Watch logs
+cd frontend
+npm install
+npm run dev
 ```
 
 ### 3. Database Changes
@@ -300,6 +306,9 @@ docker network inspect afterresume-net
 
 # Verify ALLOWED_HOSTS
 docker exec afterresume-backend-api python -c "from django.conf import settings; print(settings.ALLOWED_HOSTS)"
+
+# Verify frontend proxy target
+docker exec afterresume-frontend printenv BACKEND_ORIGIN
 ```
 
 ### Database issues

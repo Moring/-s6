@@ -94,7 +94,7 @@ docker compose exec backend-api python manage.py shell
 ...     expires_at=timezone.now() + timedelta(days=7),
 ...     max_uses=1
 ... )
->>> print(f"Invite URL: /accounts/signup/?passkey={passkey.code}")
+>>> print(f"Passkey for SPA signup: {passkey.code}")
 ```
 
 ### Managing Roles
@@ -183,12 +183,12 @@ Applies to:
 - `/admin/`
 - `/django-admin/`
 
-### Session Security
-Sessions are configured for security:
-- HttpOnly cookies (no JavaScript access)
-- Secure cookies in production (HTTPS only)
-- SameSite: Lax (CSRF protection)
-- 2-week expiry with sliding window
+### Token & Session Security
+SPA authentication uses JWT access tokens with HttpOnly refresh cookies:
+- Access tokens are short-lived and sent via `Authorization: Bearer <access>`
+- Refresh tokens live in HttpOnly cookies (path `/api/auth/`) and rotate on refresh
+- Session cookies remain for Django admin and staff-only server routes
+- HttpOnly cookies, Secure in production, SameSite: Lax
 
 ## Operational Controls
 
@@ -286,7 +286,7 @@ The gamification system encourages consistent logging and quality content throug
 Admin endpoint for platform-wide gamification metrics:
 
 ```bash
-curl -H "Authorization: Token ADMIN_TOKEN" \
+curl -H "Authorization: Bearer ADMIN_TOKEN" \
   http://localhost:8000/api/admin/gamification/metrics/
 ```
 
@@ -402,7 +402,7 @@ Admin can manually grant XP to users:
 
 ```bash
 curl -X POST \
-  -H "Authorization: Token ADMIN_TOKEN" \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   http://localhost:8000/api/admin/gamification/grant/ \
   -d '{
@@ -429,7 +429,7 @@ Remove badge from user (use with caution):
 
 ```bash
 curl -X POST \
-  -H "Authorization: Token ADMIN_TOKEN" \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   http://localhost:8000/api/admin/gamification/revoke/ \
   -d '{
@@ -515,7 +515,7 @@ Frontend respects `quiet_mode` and hides widgets, but reward evaluation still ru
 
 ### Health Checks
 - Backend: `GET /api/healthz/` → `{"status": "ok"}`
-- Frontend: `GET /healthz/` → `200 OK`
+- Frontend: `GET /healthz` → `200 OK`
 
 ### View Event Timeline
 ```python

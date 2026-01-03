@@ -13,19 +13,29 @@ const buildQueryString = (params = {}) => {
 }
 
 export const authApi = {
-  login: ({ username, password, remember }) =>
-    request('POST', '/auth/login/', {
-      username,
-      password,
-      remember_me: remember,
-    }),
+  login: ({ username, password }) =>
+    request(
+      'POST',
+      '/auth/login/',
+      {
+        username,
+        password,
+      },
+      { skipAuth: true, skipAuthRefresh: true }
+    ),
   signup: ({ username, email, password, passkey }) =>
-    request('POST', '/auth/signup/', {
-      username,
-      email,
-      password,
-      passkey,
-    }),
+    request(
+      'POST',
+      '/auth/signup/',
+      {
+        username,
+        email,
+        password,
+        passkey,
+      },
+      { skipAuth: true, skipAuthRefresh: true }
+    ),
+  refresh: () => request('POST', '/auth/token/refresh/', null, { skipAuth: true, skipAuthRefresh: true }),
   logout: () => request('POST', '/auth/logout/'),
   me: () => request('GET', '/me/'),
 }

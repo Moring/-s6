@@ -33,6 +33,8 @@ import {
   resetChatFlow,
   setCanvas,
   setAuth,
+  setAccessToken,
+  getAccessToken,
   clearAuth,
   setFooterStatus,
   setFooterLoading,
@@ -89,6 +91,23 @@ export default {
   methods: {
     async bootstrapSession() {
       try {
+        const refreshed = await authApi.refresh()
+        if (refreshed?.data?.access) {
+          setAccessToken(refreshed.data.access)
+        }
+      } catch (error) {
+        if (error.status && ![400, 401].includes(error.status)) {
+          addMessage('assistant', 'Unable to restore session. Please login.')
+          setCanvas('auth-error', { message: 'Unable to restore session.' })
+        }
+      }
+
+      if (!getAccessToken()) {
+        this.promptLogin()
+        return
+      }
+
+      try {
         const response = await authApi.me()
         const user = response.data
         setAuth(user)
@@ -101,10 +120,12 @@ export default {
         await this.refreshStatus()
         this.startStatusPolling()
       } catch (error) {
+        clearAuth()
         if (error.status && error.status !== 401) {
           addMessage('assistant', 'Unable to verify session. Please login.')
           setCanvas('auth-error', { message: 'Unable to verify session.' })
         }
+        this.promptLogin()
       }
     },
     async handleSend(text) {
@@ -118,16 +139,15 @@ export default {
       const normalized = text.trim().toLowerCase()
 
       if (!this.state.auth.isAuthenticated) {
-        if (normalized === 'login') {
-          this.startAuthFlow(AUTH_FLOW_MODES.LOGIN)
-          return
-        }
         if (normalized === 'signup') {
           this.startAuthFlow(AUTH_FLOW_MODES.SIGNUP)
           return
         }
-        addMessage('assistant', AUTH_REQUIRED_MESSAGE)
-        setCanvas('not-logged-in', { message: AUTH_REQUIRED_MESSAGE })
+        if (!isAuthFlowActive(this.state.chat.flow)) {
+          const { flow } = beginAuthFlow(AUTH_FLOW_MODES.LOGIN)
+          setChatFlow(flow)
+        }
+        await this.handleAuthFlowInput(text)
         return
       }
 
@@ -186,8 +206,10 @@ export default {
         const response = await authApi.login({
           username: payload.username,
           password: payload.password,
-          remember: payload.remember,
         })
+        if (response.data.access) {
+          setAccessToken(response.data.access)
+        }
         const user = response.data.user || response.data
         setAuth(user)
         this.statusEtag = null
@@ -203,7 +225,11 @@ export default {
         addMessage('assistant', LOGIN_FAILED_MESSAGE)
         setCanvas('auth-error', { message: LOGIN_FAILED_MESSAGE })
       } finally {
-        resetChatFlow()
+        if (!this.state.auth.isAuthenticated) {
+          this.promptLogin()
+        } else {
+          resetChatFlow()
+        }
         setChatBusy(false)
       }
     },
@@ -218,6 +244,9 @@ export default {
           password: payload.password,
           passkey: payload.passkey,
         })
+        if (response.data.access) {
+          setAccessToken(response.data.access)
+        }
         const user = response.data.user || response.data
         setAuth(user)
         this.statusEtag = null
@@ -233,7 +262,11 @@ export default {
         addMessage('assistant', SIGNUP_FAILED_MESSAGE)
         setCanvas('auth-error', { message: SIGNUP_FAILED_MESSAGE })
       } finally {
-        resetChatFlow()
+        if (!this.state.auth.isAuthenticated) {
+          this.promptLogin()
+        } else {
+          resetChatFlow()
+        }
         setChatBusy(false)
       }
     },
@@ -253,6 +286,14 @@ export default {
         addMessage('assistant', 'Logged out.')
         setCanvas('not-logged-in', { message: AUTH_REQUIRED_MESSAGE })
         setChatBusy(false)
+      }
+    },
+    promptLogin() {
+      setCanvas('not-logged-in', { message: AUTH_REQUIRED_MESSAGE })
+      const { flow, prompt } = beginAuthFlow(AUTH_FLOW_MODES.LOGIN)
+      setChatFlow(flow)
+      if (prompt) {
+        addMessage('assistant', prompt)
       }
     },
     async executeAdminCommand(command) {
@@ -368,6 +409,12 @@ export default {
           })
         }
       } catch (error) {
+        if (error.status === 401) {
+          clearAuth()
+          this.stopStatusPolling()
+          this.promptLogin()
+          return
+        }
         setFooterError(error.message || 'Unable to refresh status.')
       } finally {
         setFooterLoading(false)

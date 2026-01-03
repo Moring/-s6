@@ -2,6 +2,7 @@
 Base Django settings for AfterResume backend.
 """
 import os
+from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt.token_blacklist',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -147,10 +149,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -159,6 +161,17 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+}
+
+JWT_REFRESH_COOKIE_NAME = os.environ.get('JWT_REFRESH_COOKIE_NAME', 'afterresume_refresh')
+JWT_REFRESH_COOKIE_PATH = os.environ.get('JWT_REFRESH_COOKIE_PATH', '/api/auth/')
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 # Huey configuration
@@ -274,8 +287,8 @@ ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # REST Framework authentication
 REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
+    'rest_framework_simplejwt.authentication.JWTAuthentication',
     'rest_framework.authentication.SessionAuthentication',
-    'rest_framework.authentication.TokenAuthentication',
 ]
 REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
     'rest_framework.permissions.IsAuthenticated',

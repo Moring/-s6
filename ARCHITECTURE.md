@@ -6,11 +6,12 @@ AfterResume is a multi-tenant SaaS platform for managing work logs, skills track
 ## Service Architecture
 
 ### Service Boundaries
-- **Frontend**: Vue2 SPA + Node proxy (presentation + sessions only)
+- **Frontend**: Vue SPA frontend (Node-based runtime for serving SPA assets and proxying `/api/*`)
 - **Backend**: Django + DRF orchestration service (AI workflows, persistence, storage, jobs, observability)
 - **Manager**: Dokploy (deployment control plane)
 
-Frontend never directly accesses Postgres or MinIO. All persistence is owned by the backend.
+Frontend never directly accesses Postgres, MinIO, Valkey, or workers. All persistence and authorization are owned by the backend.
+The frontend is a client-only SPA (no server-rendered HTML) and communicates with the backend exclusively over HTTP APIs.
 
 ## Layering Rules
 
@@ -69,12 +70,16 @@ Security headers applied to all responses:
 - **Referrer-Policy**: strict-origin-when-cross-origin
 - **Permissions-Policy**: Denies geolocation, camera, microphone, etc.
 
-### Session Security
-- HttpOnly cookies
-- Secure cookies in production
-- SameSite: Lax
-- CSRF protection enabled
-- 2-week session expiry with sliding window
+### Token & Session Security
+- Backend issues short-lived JWT access tokens to the SPA and stores refresh tokens in HttpOnly cookies
+- SPA sends `Authorization: Bearer <access>` on API calls and refreshes via `/api/auth/token/refresh/`
+- Session cookies remain for Django admin and staff-only server routes
+- HttpOnly cookies, Secure in production, SameSite: Lax
+- CSRF protection applies to session-authenticated endpoints
+
+### SPA CORS/CSRF Considerations
+- Prefer serving the SPA and API on the same origin via the frontend proxy
+- If cross-origin, configure `CSRF_TRUSTED_ORIGINS` (backend) and CORS allowlists
 
 ### Optional Admin Controls
 - IP allowlist for admin endpoints (`ADMIN_IP_ALLOWLIST` env var)

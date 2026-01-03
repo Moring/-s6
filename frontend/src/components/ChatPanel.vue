@@ -3,7 +3,7 @@
     <div class="panel-header">
       <div>
         <div class="panel-title">Chat</div>
-        <div class="panel-subtitle">Type commands to drive actions.</div>
+        <div class="panel-subtitle">Respond to the prompts to continue.</div>
       </div>
       <div class="afterresume-muted">{{ statusLabel }}</div>
     </div>
@@ -23,14 +23,14 @@
         class="form-control"
         rows="2"
         :disabled="busy"
-        placeholder="Type 'login', 'signup', or an admin command..."
+        placeholder="Type your response..."
       ></textarea>
       <div class="chat-actions">
         <button type="submit" class="btn btn-primary" :disabled="busy || !draft.trim()">
           Send
         </button>
         <span class="afterresume-muted" v-if="busy">Working...</span>
-        <span class="afterresume-muted" v-else>Try: login, signup, admin help</span>
+        <span class="afterresume-muted" v-else>Need access? Ask an admin for a passkey.</span>
       </div>
     </form>
   </section>

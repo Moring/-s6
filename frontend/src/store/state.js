@@ -10,6 +10,7 @@ export const state = Vue.observable({
     user: null,
     isAuthenticated: false,
     isAdmin: false,
+    accessToken: null,
   },
   chat: {
     messages: [
@@ -73,7 +74,14 @@ export const clearAuth = () => {
   state.auth.user = null
   state.auth.isAuthenticated = false
   state.auth.isAdmin = false
+  state.auth.accessToken = null
 }
+
+export const setAccessToken = (token) => {
+  state.auth.accessToken = token || null
+}
+
+export const getAccessToken = () => state.auth.accessToken
 
 export const setFooterStatus = ({ sessionTokens, reserveBalance, updatedAt, isLowBalance }) => {
   state.footer.sessionTokens = sessionTokens

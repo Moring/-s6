@@ -9,14 +9,10 @@ describe('auth flow', () => {
     expect(step1.prompt).toBe('Enter password:')
 
     const step2 = advanceAuthFlow(step1.flow, 'super-secret')
-    expect(step2.prompt).toBe('Remember me? (yes/no)')
-
-    const step3 = advanceAuthFlow(step2.flow, 'yes')
-    expect(step3.complete.type).toBe(AUTH_FLOW_MODES.LOGIN)
-    expect(step3.complete.data).toEqual({
+    expect(step2.complete.type).toBe(AUTH_FLOW_MODES.LOGIN)
+    expect(step2.complete.data).toEqual({
       username: 'alice',
       password: 'super-secret',
-      remember: true,
     })
   })
 

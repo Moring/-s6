@@ -43,10 +43,10 @@ task health
 docker exec afterresume-postgres pg_dump -U afterresume afterresume | \
   gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 
-# Get admin token for API access
+# Get admin access token for API access
 curl -s -X POST http://localhost:8000/api/auth/token/ \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | jq -r '.token'
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.access'
 ```
 
 ### System Status At-a-Glance
@@ -57,7 +57,7 @@ docker ps --filter "name=afterresume" --format "{{.Names}}: {{.Status}}" | sort
 
 # Quick health verification
 curl -s http://localhost:8000/api/healthz/ && echo " [Backend OK]" && \
-curl -s http://localhost:3000/health/ > /dev/null && echo "[Frontend OK]"
+curl -s http://localhost:3000/healthz > /dev/null && echo "[Frontend OK]"
 
 # Service port mapping
 docker ps --filter "name=afterresume" --format "table {{.Names}}\t{{.Ports}}"
@@ -113,7 +113,7 @@ cd afterresume
 cp .env.example .env
 
 # 3. CRITICAL: Edit .env with production-appropriate settings
-#    - Generate strong SECRET_KEY values
+#    - Generate strong SECRET_KEY and SERVICE_TO_SERVICE_SECRET values
 #    - Set DEBUG=0 for production
 #    - Configure database credentials
 #    - Add Stripe keys
@@ -128,7 +128,6 @@ task up
 #  - backend-api (port 8000)
 #  - postgres (port 5432)
 #  - valkey (redis-compatible) for backend queue (port 6379)
-#  - valkey-frontend for sessions/cache (port 6380)
 #  - minio for object storage (ports 9000-9001)
 #  - backend-worker for async job processing
 
@@ -179,7 +178,7 @@ curl http://localhost:8000/api/readyz/
 # Expected: {"status":"ready", "db":"ok", "cache":"ok", "storage":"ok"}
 
 # 4. Test frontend health
-curl http://localhost:3000/health/
+curl http://localhost:3000/healthz
 # Expected: HTTP 200 with HTML page
 
 # 5. Test frontend → backend connectivity (critical)
@@ -188,14 +187,14 @@ docker exec afterresume-frontend curl -s http://backend-api:8000/api/healthz/
 # If this fails, check Docker network configuration
 
 # 6. Test authentication system
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
+ACCESS_TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
-echo "Token received: ${TOKEN:0:20}..."
-# Expected: Token string (40 characters)
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.access')
+echo "Access token received: ${ACCESS_TOKEN:0:20}..."
+# Expected: JWT access token string
 
 # 7. Test authenticated endpoint
-curl -H "Authorization: Token $TOKEN" \
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
   http://localhost:8000/api/status/bar/ | jq .
 # Expected: JSON with reserve_balance, tokens_in, tokens_out, jobs_running
 ```
@@ -204,14 +203,13 @@ curl -H "Authorization: Token $TOKEN" \
 
 | Service | URL | Purpose | Auth Required |
 |---------|-----|---------|---------------|
-| **Frontend UI** | http://localhost:3000 | Main user interface | Session (login) |
-| **Backend API** | http://localhost:8000 | REST API | Token |
+| **Frontend UI** | http://localhost:3000 | Main user interface | JWT access token + refresh cookie |
+| **Backend API** | http://localhost:8000 | REST API | JWT access token |
 | **Django Admin** | http://localhost:8000/django-admin/ | Model management | Session (staff) |
 | **API Documentation** | http://localhost:8000/api/docs/ | Auto-generated API docs | Public |
 | **MinIO Console** | http://localhost:9001 | Object storage admin | MinIO credentials |
 | **Postgres** | localhost:5432 | Database | DB credentials |
 | **Valkey (Backend)** | localhost:6379 | Job queue | No auth (internal) |
-| **Valkey (Frontend)** | localhost:6380 | Session cache | No auth (internal) |
 
 ### Default Credentials
 
@@ -242,9 +240,9 @@ curl -H "Authorization: Token $TOKEN" \
 │                  AfterResume System                     │
 │                                                         │
 │  Frontend (Port 3000)          Backend (Port 8000)     │
-│  ├─ Django + HTMX UI           ├─ Django + DRF API     │
-│  ├─ Valkey Cache (6380)        ├─ Postgres Database    │
-│  ├─ Sessions & UI state        ├─ Valkey Queue (6379)  │
+│  ├─ Vue SPA + Node runtime     ├─ Django + DRF API     │
+│  ├─ SPA assets + /api proxy    ├─ Postgres Database    │
+│  ├─ X-Service-Token injection  ├─ Valkey Queue (6379)  │
 │  └─ Calls Backend via HTTP     ├─ MinIO Storage        │
 │                                 ├─ Huey Workers         │
 │                                 └─ AI Agents + LLM      │
@@ -252,7 +250,7 @@ curl -H "Authorization: Token $TOKEN" \
 ```
 
 ### Key Design Principles
-1. **Frontend** is presentation-only (no direct DB/storage access)
+1. **Frontend** is presentation-only (no direct DB/storage/cache/worker access)
 2. **Backend** owns all persistence and orchestration
 3. **Multi-tenant** by default (data isolated per tenant)
 4. **Job-driven** for async/AI work
@@ -262,6 +260,12 @@ curl -H "Authorization: Token $TOKEN" \
 - Both frontend and backend use shared Docker network: `afterresume-net`
 - Frontend calls backend via `http://backend-api:8000`
 - All services use internal networking except published ports
+
+### Frontend Runtime Notes
+- Vue SPA runs in a separate container; Node runtime serves `dist/` and proxies `/api/*`
+- Docker build uses a Node build stage (`npm run build`) and a runtime stage (`node server/index.js`)
+- Health check: `GET /healthz` on port 3000
+- Frontend logs are separate from backend logs; restarting frontend does not restart backend
 
 ---
 
@@ -284,8 +288,12 @@ POSTGRES_PASSWORD=<strong-password>
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 
-# Backend API URL (for frontend)
+# Backend API URL (internal)
 BACKEND_BASE_URL=http://backend-api:8000  # Internal Docker network
+
+# Frontend runtime (Node proxy)
+BACKEND_ORIGIN=http://backend-api:8000
+SERVICE_TO_SERVICE_SECRET=<shared-secret>
 
 # Session Security (production)
 SESSION_COOKIE_SECURE=True
@@ -400,7 +408,7 @@ print(f"Expires: {passkey.expires_at}")
 **Method 3: Backend API** (requires staff auth)
 ```bash
 curl -X POST http://localhost:8000/api/admin/passkeys/ \
-  -H "Authorization: Token <admin-token>" \
+  -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "expires_days": 7,
@@ -422,14 +430,14 @@ curl -X POST http://localhost:8000/api/admin/passkeys/ \
 http://localhost:8000/admin/auth/user/
 
 # Via API
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   http://localhost:8000/api/admin/users/
 ```
 
 **Disable/Enable User:**
 ```bash
 curl -X PATCH http://localhost:8000/api/admin/users/<user_id>/ \
-  -H "Authorization: Token <admin-token>" \
+  -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
   -d '{"is_active": false}'
 ```
@@ -437,7 +445,7 @@ curl -X PATCH http://localhost:8000/api/admin/users/<user_id>/ \
 **Reset User Password (Admin):**
 ```bash
 curl -X POST http://localhost:8000/api/admin/users/<user_id>/reset-password/ \
-  -H "Authorization: Token <admin-token>" \
+  -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
   -d '{"new_password": "TemporaryPassword123!"}'
 ```
@@ -445,7 +453,7 @@ curl -X POST http://localhost:8000/api/admin/users/<user_id>/reset-password/ \
 **View User Activity:**
 ```bash
 # Audit events for specific user
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/audit-events/?user_id=<user_id>"
 ```
 
@@ -453,12 +461,21 @@ curl -H "Authorization: Token <admin-token>" \
 
 ## Authentication & Security
 
+The Vue SPA frontend is a client only; the backend is the source of truth for authentication and authorization.
+
 ### Authentication Flow
 
-1. **User logs into Frontend** (Django + allauth)
-2. **Frontend obtains Backend token** (automatic via custom login form)
-3. **Frontend stores token in session**
-4. **All backend API calls use token** (Authorization: Token <key>)
+1. **User logs into Vue SPA frontend** via `/api/auth/login/` (backend)
+2. **Backend issues JWT access token + HttpOnly refresh cookie**
+3. **Frontend stores auth state + access token in memory** and sends `Authorization: Bearer <access>`
+4. **Refresh happens via** `/api/auth/token/refresh/` (refresh cookie)
+5. **All API calls go through the frontend proxy** (service token injected)
+
+### SPA Security Notes
+- Access tokens are short-lived and never stored in persistent storage
+- Refresh tokens are HttpOnly cookies scoped to `/api/auth/`
+- CSRF protection applies to session-authenticated endpoints (e.g., Django admin)
+- If serving the SPA on a different origin, configure `CSRF_TRUSTED_ORIGINS` and CORS allowlists
 
 ### Getting an API Token
 
@@ -476,7 +493,8 @@ curl -X POST http://localhost:8000/api/auth/token/ \
 Response:
 ```json
 {
-  "token": "f0cf61f42b3456a22f8a2b93caaf984ff0e338a3",
+  "access": "eyJ0eXAiOiJKV1QiLCJh...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJh...",
   "user": {...}
 }
 ```
@@ -484,14 +502,12 @@ Response:
 ### Session Configuration
 
 **Frontend Sessions:**
-- Engine: Valkey cache backend
-- Expiry: 2 weeks (configurable)
-- Remember me: Optional (checkbox on login)
-- Secure cookies: Enabled in production
+- No frontend session store; the SPA keeps the access token in memory
+- Refresh tokens live in HttpOnly cookies; Node proxy is stateless
 
 **Backend Sessions:**
-- DRF Token Authentication (persistent)
-- Session Authentication (for Django admin)
+- Django session authentication (admin + staff-only server routes)
+- JWT authentication for API access
 
 ### Password Policy
 
@@ -539,7 +555,7 @@ All authentication events are logged to `AuthEvent` model:
 
 Query audit log:
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/audit-events/?event_type=login&limit=50"
 ```
 
@@ -559,7 +575,7 @@ Each tenant has a **prepaid reserve balance** for usage-based billing.
 
 **Via API:**
 ```bash
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   http://localhost:8000/api/billing/reserve/balance/
 
 # Response:
@@ -578,7 +594,7 @@ curl -H "Authorization: Token <user-token>" \
 ```bash
 # Create checkout session
 curl -X POST http://localhost:8000/api/billing/topup/session/ \
-  -H "Authorization: Token <user-token>" \
+  -H "Authorization: Bearer <user-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "amount_dollars": 50
@@ -599,7 +615,7 @@ For promotional credits, refunds, or corrections:
 
 ```bash
 curl -X POST http://localhost:8000/api/billing/admin/reserve/adjust/ \
-  -H "Authorization: Token <admin-token>" \
+  -H "Authorization: Bearer <admin-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "tenant_id": 1,
@@ -614,13 +630,13 @@ curl -X POST http://localhost:8000/api/billing/admin/reserve/adjust/ \
 
 View transaction history:
 ```bash
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   "http://localhost:8000/api/billing/reserve/ledger/?limit=50"
 ```
 
 Export ledger (admin):
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/billing/admin/ledger/export.csv" \
   > ledger_export.csv
 ```
@@ -635,7 +651,7 @@ Configurable per tenant:
 Set policy:
 ```bash
 curl -X PATCH http://localhost:8000/api/billing/profile/ \
-  -H "Authorization: Token <user-token>" \
+  -H "Authorization: Bearer <user-token>" \
   -H "Content-Type: application/json" \
   -d '{"low_balance_policy": "block"}'
 ```
@@ -671,7 +687,7 @@ Usage costs are computed per job execution:
 
 View usage costs (admin):
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/billing/admin/usage/costs/?start_date=2025-12-01&end_date=2025-12-31"
 ```
 
@@ -689,7 +705,7 @@ The worklog system allows users to track their daily work activities with rich m
 ```bash
 # Via API
 curl -X POST http://localhost:8000/api/worklogs/ \
-  -H "Authorization: Token <user-token>" \
+  -H "Authorization: Bearer <user-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "date": "2025-12-31",
@@ -708,28 +724,28 @@ curl -X POST http://localhost:8000/api/worklogs/ \
 **List Entries**:
 ```bash
 # Get paginated list
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   "http://localhost:8000/api/worklogs/?limit=20&offset=0"
 
 # Filter by date range
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   "http://localhost:8000/api/worklogs/?start_date=2025-12-01&end_date=2025-12-31"
 
 # Search by keyword
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   "http://localhost:8000/api/worklogs/?search=architecture"
 ```
 
 **Get Entry Detail**:
 ```bash
-curl -H "Authorization: Token <user-token>" \
+curl -H "Authorization: Bearer <user-token>" \
   "http://localhost:8000/api/worklogs/<worklog-id>/"
 ```
 
 **Update Entry**:
 ```bash
 curl -X PATCH http://localhost:8000/api/worklogs/<worklog-id>/ \
-  -H "Authorization: Token <user-token>" \
+  -H "Authorization: Bearer <user-token>" \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Updated description with additional details...",
@@ -744,7 +760,7 @@ curl -X PATCH http://localhost:8000/api/worklogs/<worklog-id>/ \
 **Delete Entry**:
 ```bash
 curl -X DELETE http://localhost:8000/api/worklogs/<worklog-id>/ \
-  -H "Authorization: Token <user-token>"
+  -H "Authorization: Bearer <user-token>"
 ```
 
 ### Frontend Worklog UI Features
@@ -754,7 +770,7 @@ curl -X DELETE http://localhost:8000/api/worklogs/<worklog-id>/ \
 - Smart suggestions from recent entries (last 10)
 - Auto-suggests employer/project based on user history
 - Metadata stored in JSON field
-- HTMX-powered (no page reload)
+- SPA-driven (no full page reload)
 
 **Timeline View**:
 - Chronological display with cards
@@ -772,26 +788,26 @@ curl -X DELETE http://localhost:8000/api/worklogs/<worklog-id>/ \
 
 **View All Worklogs (Cross-Tenant)**:
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/worklogs/?limit=50"
 ```
 
 **View User's Worklogs**:
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/worklogs/?user_id=<user-id>&limit=50"
 ```
 
 **View Tenant's Worklogs**:
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/worklogs/?tenant_id=<tenant-id>&limit=50"
 ```
 
 **Worklog Statistics**:
 ```bash
 # Get system-wide stats
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/worklogs/stats/"
 
 # Response:
@@ -922,7 +938,7 @@ The admin panel provides comprehensive management tools for staff users. Access 
 **Monitoring Passkey Usage**:
 ```bash
 # Via API
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/admin/passkeys/list/?status=used&limit=50"
 
 # Via database
@@ -1081,7 +1097,7 @@ EOF
 **Monitoring Reserve Health**:
 ```bash
 # System-wide summary
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/billing/admin/reserve/summary/"
 
 # Response:
@@ -1137,7 +1153,7 @@ curl -H "Authorization: Token <admin-token>" \
 - **Failed Payments** (last 30d)
 
 **Features**:
-- **Auto-Refresh**: Updates every 60 seconds via HTMX
+- **Auto-Refresh**: Updates every 60 seconds via SPA polling
 - **Last Updated**: Timestamp display
 - **Alerts**: Highlighted warnings for:
   - Churn rate spike (>5% from baseline)
@@ -1196,7 +1212,7 @@ EOF
 curl http://localhost:8000/api/healthz/
 
 # Frontend
-curl http://localhost:3000/health/
+curl http://localhost:3000/healthz
 
 # Backend readiness (checks DB, cache, storage)
 curl http://localhost:8000/api/readyz/
@@ -1204,7 +1220,7 @@ curl http://localhost:8000/api/readyz/
 
 **Deep Health (staff only):**
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   http://localhost:8000/system/health/
 ```
 
@@ -1219,16 +1235,16 @@ Returns:
 
 **List Recent Jobs:**
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/system/jobs/?limit=20&status=running"
 ```
 
 **Job Detail + Events:**
 ```bash
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/jobs/<job-id>/"
 
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/jobs/<job-id>/events/"
 ```
 
@@ -1283,7 +1299,7 @@ docker logs afterresume-backend-api --tail=100 -f
 
 **Application Logs** (inside containers):
 - Backend: `/app/logs/` (if configured)
-- Frontend: `/app/logs/`
+- Frontend: stdout/stderr via container logs (no default log directory)
 
 Configure structured logging in production with:
 - JSON formatting
@@ -1330,7 +1346,7 @@ docker ps | grep backend-api
 
 **Fix:**
 - Ensure both services use same Docker network (`afterresume-net`)
-- Verify `BACKEND_BASE_URL=http://backend-api:8000` in frontend `.env`
+- Verify `BACKEND_ORIGIN=http://backend-api:8000` in frontend environment
 - Restart services: `task restart`
 
 #### 2. Jobs Not Executing
@@ -1402,17 +1418,18 @@ task bootstrap
 
 **Diagnosis:**
 ```bash
-# Check static files exist
-docker exec afterresume-frontend ls -la /app/static/
+# Check SPA build output exists
+docker exec afterresume-frontend ls -la /app/dist
 
-# Test static file access
-curl -I http://localhost:3000/static/css/app.min.css
+# Test SPA entrypoint
+curl -I http://localhost:3000/
 ```
 
 **Fix:**
 ```bash
-# Collect static files
-docker exec afterresume-frontend python manage.py collectstatic --noinput
+# Rebuild frontend image
+docker compose -f frontend/docker-compose.yml build --no-cache frontend
+docker compose -f frontend/docker-compose.yml up -d frontend
 
 # Verify static files mounted
 docker inspect afterresume-frontend | grep -A 10 Mounts
@@ -1450,7 +1467,7 @@ curl -X POST http://localhost:8000/api/billing/webhook/ \
 **Diagnosis:**
 ```bash
 # Check session settings
-docker exec afterresume-frontend python manage.py shell
+docker exec afterresume-backend-api python manage.py shell
 >>> from django.conf import settings
 >>> print(settings.SESSION_COOKIE_AGE)
 >>> print(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
@@ -1458,7 +1475,7 @@ docker exec afterresume-frontend python manage.py shell
 
 **Fix:**
 - Adjust `SESSION_COOKIE_AGE` in settings
-- Ensure Valkey (session backend) is healthy
+- Ensure session backend is healthy (cache/DB depending on settings)
 - Check for cookie domain/secure flag issues
 
 ---
@@ -1537,7 +1554,7 @@ docker compose -f backend/docker-compose.yml start backend-api backend-worker
 ### Pre-Deployment Checklist
 
 - [ ] Change default admin password
-- [ ] Generate strong `SECRET_KEY` (both frontend and backend)
+- [ ] Generate strong `SECRET_KEY` (backend) and `SERVICE_TO_SERVICE_SECRET`
 - [ ] Set `DEBUG=0`
 - [ ] Configure `ALLOWED_HOSTS` correctly
 - [ ] Enable HTTPS/TLS
@@ -1684,14 +1701,14 @@ Returns: {"message": "Login successful", "user": {...}}
 **Logout:**
 ```
 POST /api/auth/logout/
-Headers: Authorization: Token <token>
+Headers: Authorization: Bearer <token>
 Returns: {"message": "Logout successful"}
 ```
 
 **Get Current User:**
 ```
 GET /api/me/
-Headers: Authorization: Token <token>
+Headers: Authorization: Bearer <token>
 Returns: {"id": 1, "username": "user", "profile": {...}}
 ```
 
@@ -1700,21 +1717,21 @@ Returns: {"id": 1, "username": "user", "profile": {...}}
 **Reserve Balance:**
 ```
 GET /api/billing/reserve/balance/
-Headers: Authorization: Token <token>
+Headers: Authorization: Bearer <token>
 Returns: {"balance_cents": 5000, "balance_dollars": 50.0, ...}
 ```
 
 **Reserve Ledger:**
 ```
 GET /api/billing/reserve/ledger/?limit=50
-Headers: Authorization: Token <token>
+Headers: Authorization: Bearer <token>
 Returns: [{"id": 1, "type": "credit", "amount_cents": 5000, ...}, ...]
 ```
 
 **Create Top-Up Session:**
 ```
 POST /api/billing/topup/session/
-Headers: Authorization: Token <token>
+Headers: Authorization: Bearer <token>
 Body: {"amount_dollars": 50}
 Returns: {"session_id": "cs_test_...", "checkout_url": "https://..."}
 ```
@@ -1724,7 +1741,7 @@ Returns: {"session_id": "cs_test_...", "checkout_url": "https://..."}
 **Create Passkey:**
 ```
 POST /api/admin/passkeys/
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Body: {"expires_days": 7, "notes": "Invite for user"}
 Returns: {"passkey": "...", "expires_at": "..."}
 ```
@@ -1732,14 +1749,14 @@ Returns: {"passkey": "...", "expires_at": "..."}
 **List Users:**
 ```
 GET /api/admin/users/?limit=50
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Returns: [{"id": 1, "username": "user", ...}, ...]
 ```
 
 **Adjust Reserve (Admin):**
 ```
 POST /api/billing/admin/reserve/adjust/
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Body: {"tenant_id": 1, "amount_cents": 10000, "reason": "Credit"}
 Returns: {"message": "Reserve adjusted", "new_balance_cents": 10000}
 ```
@@ -1747,7 +1764,7 @@ Returns: {"message": "Reserve adjusted", "new_balance_cents": 10000}
 **Audit Events:**
 ```
 GET /api/admin/audit-events/?user_id=1&limit=50
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Returns: [{"id": 1, "event_type": "login", "timestamp": "...", ...}, ...]
 ```
 
@@ -1756,14 +1773,14 @@ Returns: [{"id": 1, "event_type": "login", "timestamp": "...", ...}, ...]
 **System Metrics Summary:**
 ```
 GET /api/system/metrics/summary/?start_date=2025-12-01&end_date=2025-12-31
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Returns: {"mrr": 10000, "arr": 120000, "churn_rate": 0.05, ...}
 ```
 
 **Jobs List:**
 ```
 GET /system/jobs/?status=running&limit=20
-Headers: Authorization: Token <admin-token>
+Headers: Authorization: Bearer <admin-token>
 Returns: [{"id": "uuid", "name": "worklog_analysis", "status": "running", ...}, ...]
 ```
 
@@ -1913,7 +1930,7 @@ This section provides step-by-step procedures for handling critical production i
    ```bash
    task health
    curl http://localhost:8000/api/healthz/
-   curl http://localhost:3000/health/
+   curl http://localhost:3000/healthz
    
    # Test login
    curl -X POST http://localhost:8000/api/auth/token/ \
@@ -2081,7 +2098,7 @@ This section provides step-by-step procedures for handling critical production i
    docker start afterresume-frontend
    
    # Force all users to re-login
-   docker exec afterresume-frontend python manage.py shell <<EOF
+   docker exec afterresume-backend-api python manage.py shell <<EOF
    from django.contrib.sessions.models import Session
    Session.objects.all().delete()
    EOF
@@ -2210,8 +2227,8 @@ task restart
 # Clear Redis cache
 docker exec afterresume-valkey redis-cli FLUSHALL
 
-# Clear frontend sessions
-docker exec afterresume-frontend python manage.py shell -c "from django.contrib.sessions.models import Session; Session.objects.all().delete()"
+# Clear backend sessions
+docker exec afterresume-backend-api python manage.py shell -c "from django.contrib.sessions.models import Session; Session.objects.all().delete()"
 
 # Run migrations
 task migrate
@@ -2366,7 +2383,7 @@ print(f"Admin actions (7d): {admin_actions}")
 EOF
 
 # 6. Review billing health
-curl -H "Authorization: Token <admin-token>" \
+curl -H "Authorization: Bearer <admin-token>" \
   "http://localhost:8000/api/billing/admin/reserve/summary/" | jq .
 
 # 7. Review user growth
@@ -2588,11 +2605,11 @@ docker exec afterresume-valkey redis-cli INFO | grep -E "(connected_clients|used
 **End of Day Checklist** (3 minutes):
 ```bash
 # 1. Review system metrics
-curl -s -H "Authorization: Token $TOKEN" \
+curl -s -H "Authorization: Bearer $TOKEN" \
   http://localhost:8000/api/system/metrics/summary/ | jq '.summary'
 
 # 2. Check for any failed jobs today
-curl -s -H "Authorization: Token $TOKEN" \
+curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8000/api/jobs/?status=failed&created_since=$(date -u +%Y-%m-%d)" | \
   jq '.count'
 
@@ -2600,7 +2617,7 @@ curl -s -H "Authorization: Token $TOKEN" \
 ./scripts/daily_backup.sh
 
 # 4. Review audit log for unusual activity
-curl -s -H "Authorization: Token $TOKEN" \
+curl -s -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8000/api/admin/audit-events/?date=$(date -u +%Y-%m-%d)" | \
   jq '.results | map(select(.event_type | contains("failed"))) | length'
 ```
@@ -2615,15 +2632,15 @@ curl -s -H "Authorization: Token $TOKEN" \
 2. **Regular Security Reviews**:
    ```bash
    # Review recent auth failures
-   curl -H "Authorization: Token $TOKEN" \
+   curl -H "Authorization: Bearer $TOKEN" \
      "http://localhost:8000/api/admin/audit-events/?event_type=login_failed&limit=50"
    
    # Check for unusual admin actions
-   curl -H "Authorization: Token $TOKEN" \
+   curl -H "Authorization: Bearer $TOKEN" \
      "http://localhost:8000/api/admin/audit-events/?event_type__contains=admin&limit=50"
    
    # Review password reset requests
-   curl -H "Authorization: Token $TOKEN" \
+   curl -H "Authorization: Bearer $TOKEN" \
      "http://localhost:8000/api/admin/audit-events/?event_type=password_reset&limit=50"
    ```
 
@@ -2724,7 +2741,8 @@ curl -s -H "Authorization: Token $TOKEN" \
 3. **Execution**:
    ```bash
    # Enable maintenance mode
-   docker exec afterresume-frontend python manage.py maintenance_mode on
+   # Set MAINTENANCE_MODE=True in backend env, then restart backend-api
+   docker compose -f backend/docker-compose.yml up -d backend-api
    
    # Perform updates
    git pull origin main
@@ -2736,7 +2754,8 @@ curl -s -H "Authorization: Token $TOKEN" \
    task health
    
    # Disable maintenance mode
-   docker exec afterresume-frontend python manage.py maintenance_mode off
+   # Set MAINTENANCE_MODE=False in backend env, then restart backend-api
+   docker compose -f backend/docker-compose.yml up -d backend-api
    ```
 
 4. **Post-Maintenance Verification** (30 minutes after):
@@ -2825,8 +2844,10 @@ docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
 # Run backend tests (when pytest installed)
 docker exec afterresume-backend-api pytest tests/ -v --cov=apps
 
-# Run frontend tests
-docker exec afterresume-frontend pytest tests/ -v
+# Run frontend tests (local dev)
+cd frontend
+npm install
+npm test
 
 # Integration tests
 ./scripts/integration_tests.sh
@@ -2838,20 +2859,20 @@ k6 run load_test.js
 **Smoke Tests** (after deployment):
 ```bash
 # Test authentication
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
+ACCESS_TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.access')
 
 # Test worklog CRUD
-curl -s -H "Authorization: Token $TOKEN" \
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
   http://localhost:8000/api/worklogs/ | jq '.count'
 
 # Test billing
-curl -s -H "Authorization: Token $TOKEN" \
+curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
   http://localhost:8000/api/billing/reserve/balance/ | jq '.reserve_balance_dollars'
 
 # Test frontend
-curl -I http://localhost:3000/health/
+curl -I http://localhost:3000/healthz
 ```
 
 ### Compliance & Auditing
@@ -2877,11 +2898,11 @@ curl -I http://localhost:3000/health/
 **Audit Log Export**:
 ```bash
 # Export last 30 days of audit events
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
+ACCESS_TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token/ \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.access')
 
-curl -H "Authorization: Token $TOKEN" \
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
   "http://localhost:8000/api/admin/audit-events/?limit=10000&created_since=$(date -d '30 days ago' -u +%Y-%m-%d)" | \
   jq -r '.results[] | [.timestamp, .event_type, .user_id, .ip_address, .metadata] | @csv' > \
   audit_log_$(date +%Y%m).csv
@@ -2950,7 +2971,7 @@ gunzip -c latest_backup.sql.gz | \
 
 **DAG**: Directed Acyclic Graph - workflow execution pattern used in backend orchestration  
 **DRF**: Django REST Framework - API framework  
-**HTMX**: HTML-over-the-wire library for dynamic frontend updates  
+**SPA**: Single-page application (Vue frontend)  
 **Huey**: Task queue for async job processing  
 **MinIO**: S3-compatible object storage  
 **Valkey**: Redis-compatible in-memory data store  
@@ -2986,7 +3007,7 @@ curl -sf http://localhost:8000/api/healthz/ && echo " OK" || echo " FAILED"
 # Check Frontend
 echo ""
 echo "3. Frontend:"
-curl -sf http://localhost:3000/health/ > /dev/null && echo " OK" || echo " FAILED"
+curl -sf http://localhost:3000/healthz > /dev/null && echo " OK" || echo " FAILED"
 
 # Check Database
 echo ""

@@ -7,7 +7,6 @@ export const AUTH_FLOW_MODES = {
 export const LOGIN_STEPS = {
   USERNAME: 'username',
   PASSWORD: 'password',
-  REMEMBER: 'remember',
 }
 
 export const SIGNUP_STEPS = {
@@ -43,17 +42,6 @@ export const beginAuthFlow = (mode) => {
   return { flow: createAuthFlowState(), prompt: null }
 }
 
-const parseRemember = (value) => {
-  const normalized = value.trim().toLowerCase()
-  if (['yes', 'y'].includes(normalized)) {
-    return true
-  }
-  if (['no', 'n'].includes(normalized)) {
-    return false
-  }
-  return null
-}
-
 export const advanceAuthFlow = (flow, input) => {
   const trimmed = input.trim()
   if (!trimmed) {
@@ -70,22 +58,10 @@ export const advanceAuthFlow = (flow, input) => {
 
     if (flow.step === LOGIN_STEPS.PASSWORD) {
       return {
-        flow: { ...flow, step: LOGIN_STEPS.REMEMBER, data: { ...flow.data, password: trimmed } },
-        prompt: 'Remember me? (yes/no)',
-      }
-    }
-
-    if (flow.step === LOGIN_STEPS.REMEMBER) {
-      const remember = parseRemember(trimmed)
-      if (remember === null) {
-        return { flow, prompt: 'Remember me? (yes/no)' }
-      }
-
-      return {
         flow: createAuthFlowState(),
         complete: {
           type: AUTH_FLOW_MODES.LOGIN,
-          data: { ...flow.data, remember },
+          data: { ...flow.data, password: trimmed },
         },
       }
     }

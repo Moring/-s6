@@ -1,16 +1,14 @@
-version: '3.9'
-
 services:
   frontend:
     build:
       context: .
+    container_name: afterresume-frontend
     ports:
       - "3000:3000"
     env_file:
-      - ../dokploy.env
-    environment:
-      BACKEND_ORIGIN: ${BACKEND_ORIGIN:-http://backend-api:8000}
-      SERVICE_TO_SERVICE_SECRET: ${SERVICE_TO_SERVICE_SECRET}
+      - ../.env
+    networks:
+      - afterresume-net
 
   # Production static frontend served by nginx (builds the app and serves /dist)
   frontend_prod:
@@ -18,10 +16,15 @@ services:
       context: .
       dockerfile: Dockerfile.prod
       args:
-        BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend:8000}
+        BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend-api:8000}
+    container_name: afterresume-frontend-prod
     ports:
       - "80:80"
     env_file:
-      - ../dokploy.env
-    environment:
-      SERVICE_TO_SERVICE_SECRET: ${SERVICE_TO_SERVICE_SECRET}
+      - ../.env
+    networks:
+      - afterresume-net
+
+networks:
+  afterresume-net:
+    external: true

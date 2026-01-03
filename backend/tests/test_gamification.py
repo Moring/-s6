@@ -300,10 +300,11 @@ class TestChallengeUpdater:
             }
         )
         
-        # Log 3 different days (not enough to complete)
+        # Log 3 different days within the same week (not enough to complete)
+        week_start = date.today() - timedelta(days=date.today().weekday())
         triggers = {'logged_today': True}
         for i in range(3):
-            update_challenges(user, triggers, date.today() + timedelta(days=i), reward_config.config)
+            update_challenges(user, triggers, week_start + timedelta(days=i), reward_config.config)
         
         # Check progress
         challenge = UserChallenge.objects.filter(
@@ -330,10 +331,11 @@ class TestChallengeUpdater:
             }
         )
         
-        # Complete challenge
+        # Complete challenge within the same week
+        week_start = date.today() - timedelta(days=date.today().weekday())
         triggers = {'logged_today': True}
-        update_challenges(user, triggers, date.today(), reward_config.config)
-        update_challenges(user, triggers, date.today() + timedelta(days=1), reward_config.config)
+        update_challenges(user, triggers, week_start, reward_config.config)
+        update_challenges(user, triggers, week_start + timedelta(days=1), reward_config.config)
         
         # Check completion
         challenge = UserChallenge.objects.filter(

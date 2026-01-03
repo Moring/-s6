@@ -9,7 +9,7 @@ describe('no user enumeration messages', () => {
 
   it('matches required signup failure message', () => {
     expect(SIGNUP_FAILED_MESSAGE).toBe(
-      "Signup could not be completed. Please verify your invite passkey and credentials, or try 'login'."
+      'Signup could not be completed. Please verify your invite passkey and credentials.'
     )
   })
 })

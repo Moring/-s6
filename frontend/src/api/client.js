@@ -1,3 +1,5 @@
+import { getAccessToken, setAccessToken, clearAuth } from '../store/state'
+
 const API_BASE = '/api'
 
 const getCookie = (name) => {
@@ -16,10 +18,48 @@ const getCookie = (name) => {
 
 const shouldAttachCsrf = (method) => !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())
 
+const refreshAccessToken = async () => {
+  const response = await fetch(`${API_BASE}/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    clearAuth()
+    return false
+  }
+
+  const text = await response.text()
+  if (!text) {
+    setAccessToken(null)
+    return false
+  }
+
+  let data = null
+  try {
+    data = JSON.parse(text)
+  } catch {
+    data = null
+  }
+  if (!data || !data.access) {
+    clearAuth()
+    return false
+  }
+
+  setAccessToken(data.access)
+  return true
+}
+
 export const request = async (method, path, body, options = {}) => {
   const headers = {
     Accept: 'application/json',
     ...(options.headers || {}),
+  }
+
+  const authToken = getAccessToken()
+  if (authToken && !options.skipAuth) {
+    headers.Authorization = `Bearer ${authToken}`
   }
 
   if (body) {
@@ -48,6 +88,13 @@ export const request = async (method, path, body, options = {}) => {
 
   if (response.status === 304) {
     return { notModified: true, status: response.status, etag }
+  }
+
+  if (response.status === 401 && !options.skipAuthRefresh) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      return request(method, path, body, { ...options, skipAuthRefresh: true })
+    }
   }
 
   const text = await response.text()

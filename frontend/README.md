@@ -1,12 +1,12 @@
-# AfterResume Frontend (Vue2 SPA)
+# AfterResume Frontend (Vue SPA)
 
-Chat-first Vue2 single-page app that proxies API requests to the backend over `/api/*`.
+Chat-first Vue single-page app that proxies API requests to the backend over `/api/*`.
 
 ## Requirements
 
 - Node.js 18+
 - Backend reachable via WireGuard (or localhost for dev)
-- `BACKEND_ORIGIN` and `SERVICE_TO_SERVICE_SECRET` set in `dokploy.env` (do not commit secrets)
+- `BACKEND_ORIGIN` and `SERVICE_TO_SERVICE_SECRET` set in `.env` (local) or `dokploy.env` (Dokploy)
 
 ## Local Development
 

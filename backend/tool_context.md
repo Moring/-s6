@@ -19,7 +19,7 @@ AfterResume is a **job-driven, agent-oriented backend** for AI-powered work trac
 ## System Topology
 
 ```
-Frontend (Django + HTMX)
+Frontend (Vue SPA, Node-based runtime)
     ↓ HTTP/REST
 Backend API (Django + DRF)
     ↓ Job Enqueue
@@ -35,6 +35,27 @@ LLM Provider (vLLM/Local)
     ↓ Return
 Result → Persistence → Event Log
 ```
+
+---
+
+## API Authentication & Service Auth
+
+### Service-to-Service Token
+- Frontend → backend requests to `/api/*` (except `/api/auth/`, `/api/healthz`, `/api/share/`) must include `X-Service-Token`
+- Token format: `timestamp:hmac_signature` using `SERVICE_TO_SERVICE_SECRET`
+- Token TTL: 5 minutes (clock skew tolerated)
+
+### User Authentication (JWT)
+- `/api/auth/login/` and `/api/auth/signup/` return `{access, user}` and set a refresh cookie
+- SPA stores the access token in memory and sends `Authorization: Bearer <access>` on API calls
+- `/api/auth/token/refresh/` issues a new access token using the HttpOnly refresh cookie
+- `/api/auth/token/` returns `{access, refresh, user}` for scripts or non-SPA clients
+- `/api/auth/logout/` clears the refresh cookie and blacklists the refresh token (when provided)
+
+**Refresh Cookie Defaults**:
+- Name: `JWT_REFRESH_COOKIE_NAME` (default `afterresume_refresh`)
+- Path: `/api/auth/`
+- HttpOnly, SameSite=Lax, Secure in production
 
 ---
 
