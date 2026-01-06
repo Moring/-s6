@@ -55,10 +55,10 @@ This backend provides:
 ## System Topology
 
 ```
-┌─────────────┐
-│   Frontend  │
-│  (Separate) │
-└──────┬──────┘
+┌──────────────────┐
+│  Vue SPA Frontend │
+│ (Node-based proxy)│
+└────────┬─────────┘
        │ HTTP/REST
        ▼
 ┌─────────────────────────────────────────────┐
@@ -96,7 +96,7 @@ This backend provides:
 
 ### Components
 
-- **Frontend**: Separate React/Vue app communicating via REST API
+- **Frontend**: Vue SPA frontend communicating via REST API (Node-based proxy)
 - **Django API**: Public-facing REST endpoints for CRUD operations
 - **System Dashboard**: Internal monitoring API (staff-only)
 - **Orchestration**: Workflow coordination layer

@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Conducted a comprehensive, systematic review of the entire AfterResume codebase (3,779 Python files, 374 HTML templates) and documentation ecosystem. The primary deliverable was a production-grade enhancement of the Admin Guide & Runbook from 1,156 lines to 2,502 lines (+116% expansion), transforming it from an MVP reference document into a comprehensive operational playbook suitable for production deployment, on-call use, and team training.
+Conducted a comprehensive, systematic review of the entire AfterResume codebase (3,779 Python files plus the Vue SPA frontend) and documentation ecosystem. The primary deliverable was a production-grade enhancement of the Admin Guide & Runbook from 1,156 lines to 2,502 lines (+116% expansion), transforming it from an MVP reference document into a comprehensive operational playbook suitable for production deployment, on-call use, and team training.
 
 ---
 
@@ -37,16 +37,16 @@ Conducted a comprehensive, systematic review of the entire AfterResume codebase 
 - ✅ system - System health, metrics aggregation
 - ✅ api - DRF views (thin controllers)
 
-**Frontend** (9 Django apps):
-- ✅ accounts - Login, signup, profile
-- ✅ ui - Dashboard, home
+**Frontend** (Vue SPA):
+- ✅ auth flows - Login, signup, profile
+- ✅ UI shell - Dashboard, home
 - ✅ worklog - Worklog UI (CRUD complete)
 - ✅ billing - Billing settings
 - ✅ skills - Skills display
 - ✅ reporting - Report UI
-- ✅ admin_panel - Admin dashboards (3 complete dashboards)
+- ✅ admin - Admin dashboards (3 complete dashboards)
 - ✅ system - System monitoring (staff-only)
-- ✅ api_proxy - HTMX partial endpoints
+- ✅ API proxy - Node runtime for `/api/*`
 
 **Infrastructure**:
 - ✅ Docker networking (afterresume-net)
@@ -128,7 +128,7 @@ Conducted a comprehensive, systematic review of the entire AfterResume codebase 
 - ✅ Frontend theme integration
 
 **In Progress** (60-80%):
-- ⚠️ Billing user-facing UI (templates ready, needs final wiring)
+- ⚠️ Billing user-facing UI (frontend screens ready, needs final wiring)
 - ⚠️ Executive metrics backend (frontend complete, data aggregation TODO)
 - ⚠️ Evidence upload (model ready, endpoint TODO)
 
@@ -232,7 +232,6 @@ Conducted a comprehensive, systematic review of the entire AfterResume codebase 
 
 ```
 afterresume-frontend          Up 2 hours (healthy)      :3000->3000/tcp
-afterresume-valkey-frontend   Up 3 hours (healthy)      :6380->6379/tcp
 afterresume-backend-api       Up 23 minutes (healthy)   :8000->8000/tcp
 afterresume-postgres          Up 3 hours (healthy)      :5432->5432/tcp
 afterresume-minio             Up 3 hours (healthy)      :9000-9001->9000-9001/tcp
@@ -263,7 +262,7 @@ ollama                        Up 6 hours                :11434->11434/tcp
 
 **Billing**:
 - ✅ Backend 100% complete (Stripe, reserve, ledger)
-- ⚠️ Frontend templates exist but need final API wiring
+- ⚠️ Frontend screens exist but need final API wiring
 
 ---
 
@@ -403,7 +402,7 @@ ollama                        Up 6 hours                :11434->11434/tcp
 
 ### What Was Accomplished
 
-✅ **Comprehensive codebase review** (3,779 Python files, 374 HTML templates)  
+✅ **Comprehensive codebase review** (3,779 Python files plus Vue SPA frontend)  
 ✅ **Systematic documentation review** (14 markdown files, ~80,000 lines)  
 ✅ **System health verification** (all 7 services healthy, 75% feature complete)  
 ✅ **Architecture compliance audit** (100% compliant, zero violations)  

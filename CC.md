@@ -4,7 +4,7 @@
 
 * You are working on **AfterResume**, a multi-tenant SaaS with:
 
-  * **Frontend**: Django + HTMX UI (presentation + sessions only)
+  * **Frontend**: Vue SPA frontend (presentation only, Node-based runtime)
   * **Backend**: Django + DRF orchestration service (AI workflows, persistence, storage, jobs, observability)
   * **Manager node**: Dokploy only (deployment control plane)
 * The goal is to deliver **MVP first** while preserving a structure that scales to the final product without restructuring.
@@ -66,14 +66,14 @@
 
 * If integrating a root-level HTML theme directory:
 
-  * Treat it as input only; migrate assets into `frontend/static/` and templates into `frontend/templates/`.
+  * Treat it as input only; migrate assets into `frontend/src/assets/` and convert markup into Vue components/views.
   * Remove all references to the root HTML directory; it will be deleted.
-  * Use Django `{% static %}` and template inheritance (`base.html`, `partials/`).
-  * Keep HTMX patterns; no new frontend frameworks.
+  * Use Vite asset handling and Vue component composition for shared layout.
+  * Keep Vue SPA patterns; do not introduce server-rendered UI or additional frontend frameworks.
 
 ### 8) Authentication and controlled onboarding
 
-* Use Django + django-allauth for username/password login.
+* Backend uses Django + django-allauth for username/password login; the Vue SPA consumes auth APIs.
 * Signup is invite-only via **single-use passkey** with expiry and audit trail.
 * Admin management for passkeys and user profiles is required (at minimum via Django admin).
 * Support best-practice session security: CSRF, cookie settings, password validation, optional remember-me, session timeout, rate limiting.

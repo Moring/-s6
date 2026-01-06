@@ -55,7 +55,7 @@
 ```
 Services: 7/7 operational
 Backend API: ✅ http://localhost:8000/api/healthz/
-Frontend: ✅ http://localhost:3000/health/
+Frontend: ✅ http://localhost:3000/healthz
 Tests: ✅ 15/15 passing
 Docker: ✅ All containers healthy
 ```

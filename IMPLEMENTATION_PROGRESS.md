@@ -43,7 +43,7 @@
 - **Admin User Management**: Complete UI + backend integration ✅ **NEW**
 - **Admin Billing Dashboard**: Complete UI + backend integration ✅ **NEW**
 - **Admin Metrics Dashboard**: Complete UI (backend data aggregation TODO) ✅ **NEW**
-- **Frontend Theme**: Integrated, 25 templates, theme-aligned ✅
+- **Frontend Theme**: Integrated, 25 Vue views/components, theme-aligned ✅
 - **Login Page**: Styled and functional ✅
 - **Token Authentication**: Frontend ↔ Backend auth bridge implemented ✅
 - **Status Bar**: Live data from backend API ✅
@@ -52,7 +52,7 @@
 
 ### 🚧 In Progress
 - Frontend UI wiring (75% complete - up from 35%)
-- Billing UI (templates ready, needs final wiring)
+- Billing UI (frontend screens ready, needs final wiring)
 - Metrics computation backend (models ready, scheduled job TODO)
 - Evidence upload (endpoint TODO)
 
@@ -129,13 +129,13 @@
 | Component | Status |
 |-----------|--------|
 | Theme assets migrated | ✅ |
-| Base shell template | ✅ |
+| SPA shell layout | ✅ |
 | Navigation sidebar | ✅ **Enhanced** |
 | Top status bar | ✅ Functional |
 | Admin menu | ✅ **Complete** |
 | Route guards | ✅ |
 | KPI widgets | ⚠️ Placeholder |
-| HTMX integration | ✅ |
+| SPA integration | ✅ |
 
 **Priority**: HIGH  
 **Status**: ✅ **COMPLETE**
@@ -288,7 +288,7 @@
 
 ### Resolved (Session 10)
 - ✅ Worklog CRUD frontend wiring
-- ✅ Admin templates missing
+- ✅ Admin screens missing
 - ✅ API client missing PATCH/DELETE
 - ✅ Navigation missing admin links
 
@@ -334,7 +334,7 @@
 - **Backend APIs**: ~75 API endpoints defined and TESTED ✅ **NEW**
 - **Backend Services**: ~1,750 lines of business logic ✅
 - **Worklog Backend CRUD**: 100% functional and verified ✅ **NEW**
-- **Frontend Theme**: Integrated, 21 templates, theme-aligned ✅
+- **Frontend Theme**: Integrated, 21 Vue views/components, theme-aligned ✅
 - **Login Page**: Styled and functional ✅
 - **Token Authentication**: Frontend ↔ Backend auth bridge implemented ✅
 - **Status Bar**: Live data from backend API ✅
@@ -343,8 +343,8 @@
 
 ### 🚧 In Progress
 - Frontend UI wiring (35% complete - up from 30%)
-- Worklog quick-add (template ready, needs browser testing)
-- Billing UI (templates ready, needs API wiring)
+- Worklog quick-add (frontend view ready, needs browser testing)
+- Billing UI (frontend screens ready, needs API wiring)
 - Admin UI (backend ready, frontend stubs exist)
 
 ### ❌ Not Started
@@ -418,13 +418,13 @@ Created 3 test entries successfully. Backend is production-ready.
 | Component | Status |
 |-----------|--------|
 | Theme assets migrated | ✅ |
-| Base shell template | ✅ |
+| SPA shell layout | ✅ |
 | Navigation sidebar | ✅ |
 | Top status bar | ⚠️ Placeholder |
 | Admin menu | ✅ |
 | Route guards | ✅ |
 | KPI widgets | ⚠️ Placeholder |
-| HTMX integration | ✅ |
+| SPA integration | ✅ |
 
 **Priority**: HIGH
 **Status**: 80% complete, needs backend status endpoint
