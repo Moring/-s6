@@ -140,6 +140,15 @@ ENV_VARS: List[EnvVar] = [
         description='MinIO bucket name',
         example='artifacts'
     ),
+
+    # Tika
+    EnvVar(
+        name='TIKA_ENDPOINT',
+        required=False,
+        default='http://tika:9998',
+        description='Apache Tika endpoint',
+        example='http://tika:9998'
+    ),
     
     # Service auth
     EnvVar(
@@ -155,7 +164,7 @@ ENV_VARS: List[EnvVar] = [
         name='LLM_PROVIDER',
         required=False,
         default='local',
-        description='LLM provider (local/vllm)',
+        description='LLM provider (local/vllm/ollama)',
         example='local'
     ),
     EnvVar(
@@ -170,6 +179,13 @@ ENV_VARS: List[EnvVar] = [
         default='local-fake',
         description='LLM model name',
         example='meta-llama/Llama-2-7b-chat-hf'
+    ),
+    EnvVar(
+        name='OLLAMA_ENDPOINT',
+        required=False,
+        default='http://ollama:11434',
+        description='Ollama endpoint URL (required if LLM_PROVIDER=ollama)',
+        example='http://ollama:11434'
     ),
     
     # Email (optional)
@@ -280,6 +296,8 @@ def validate_env() -> Tuple[bool, List[str]]:
     llm_provider = os.environ.get('LLM_PROVIDER', 'local')
     if llm_provider == 'vllm' and not os.environ.get('LLM_VLLM_ENDPOINT'):
         errors.append("LLM_VLLM_ENDPOINT is required when LLM_PROVIDER=vllm")
+    if llm_provider == 'ollama' and not os.environ.get('OLLAMA_ENDPOINT'):
+        errors.append("OLLAMA_ENDPOINT is required when LLM_PROVIDER=ollama")
     
     return len(errors) == 0, errors
 

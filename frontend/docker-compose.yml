@@ -10,7 +10,7 @@ services:
     networks:
       - afterresume-net
 
-  # Production static frontend served by nginx (builds the app and serves /dist)
+  # Production static frontend served by Caddy (builds the app and serves /dist)
   frontend_prod:
     build:
       context: .

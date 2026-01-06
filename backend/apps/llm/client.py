@@ -28,5 +28,11 @@ def get_llm_client() -> LLMProvider:
             endpoint=settings.LLM_VLLM_ENDPOINT,
             model=settings.LLM_MODEL_NAME
         )
+    elif provider == 'ollama':
+        from .providers.ollama import OllamaProvider
+        return OllamaProvider(
+            endpoint=settings.OLLAMA_ENDPOINT,
+            model=settings.LLM_MODEL_NAME
+        )
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")

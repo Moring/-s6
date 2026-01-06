@@ -4,6 +4,44 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2026-01-06 - Dokploy Stack Split + Caddy Frontend + Registry Auth
+
+### Summary
+Split the swarm compose into frontend/registry/backend stacks, added a Caddy-served SPA with a Node proxy, secured the registry with htpasswd + Traefik basic auth, and wired Tika/Ollama settings for backend services.
+
+### ✅ What Changed
+- Added `docker-compose.frontend.yml`, `docker-compose.backend.yml`, and `docker-compose.registry.yml`; removed the root `docker-compose.yml`.
+- Added `frontend/Caddyfile` and switched `frontend/Dockerfile.prod` to Caddy for production serving.
+- Added `registry/htpasswd` plus Traefik basic-auth middleware for registry access.
+- Added Ollama provider + env validation, and `.env.example` variables for Tika/Ollama + Traefik hosts.
+- Updated docs: `README.md`, `ARCHITECTURE.md`, `frontend/README.md`.
+
+**Migration Required:** ❌ No  
+**Config Changes Required:** ✅ Yes (`FRONTEND_HOST`, `REGISTRY_HOST`, `TIKA_ENDPOINT`, `OLLAMA_ENDPOINT`, `LLM_PROVIDER` as needed)  
+**Breaking Changes:** ⚠️ Yes (root `docker-compose.yml` removed)  
+**Pytest Status:** ⚠️ Not run (deployment config changes)
+
+### 🧪 How to Verify
+```bash
+docker network create --driver overlay --attachable traefik
+docker network create --driver overlay --attachable backend
+docker stack deploy -c docker-compose.backend.yml afterresume-backend
+docker stack deploy -c docker-compose.frontend.yml afterresume-frontend
+docker stack deploy -c docker-compose.registry.yml afterresume-registry
+```
+
+### ⚠️ Risks / Assumptions
+- Traefik TLS/cert resolver is managed externally (not configured in the stack).
+- Backend still uses Django runserver; production should switch to gunicorn.
+- Registry auth is enforced by both htpasswd and Traefik basic auth.
+
+### 📝 Human TODOs
+- [ ] Create overlay networks `traefik` and `backend` in the swarm/Dokploy cluster.
+- [ ] Set `FRONTEND_HOST` and `REGISTRY_HOST` DNS records and TLS if needed.
+- [ ] Set `SERVICE_TO_SERVICE_SECRET`, `TIKA_ENDPOINT`, and `OLLAMA_ENDPOINT` in Dokploy env.
+- [ ] Decide on `LLM_PROVIDER` and `LLM_MODEL_NAME` for production.
+- [ ] Switch backend API command to gunicorn for production (and add dependency).
+
 ## 2026-01-03 - Docs: Vue SPA Frontend Alignment
 
 ### Summary

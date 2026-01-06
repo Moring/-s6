@@ -700,6 +700,12 @@ def get_llm_client(provider: str = None):
         from .providers.vllm import VLLMProvider
         endpoint = os.environ.get('LLM_VLLM_ENDPOINT')
         return VLLMProvider(endpoint)
+
+    elif provider == 'ollama':
+        from .providers.ollama import OllamaProvider
+        endpoint = os.environ.get('OLLAMA_ENDPOINT')
+        model = os.environ.get('LLM_MODEL_NAME')
+        return OllamaProvider(endpoint, model)
     
     elif provider == 'my_provider':
         from .providers.my_provider import MyLLMProvider
@@ -795,9 +801,13 @@ def test_my_endpoint():
 - `MINIO_BUCKET`: Bucket name
 
 **LLM**:
-- `LLM_PROVIDER`: `local|vllm|custom`
+- `LLM_PROVIDER`: `local|vllm|ollama|custom`
 - `LLM_VLLM_ENDPOINT`: vLLM API endpoint
+- `OLLAMA_ENDPOINT`: Ollama API endpoint
 - `LLM_MODEL_NAME`: Model identifier
+
+**Text Extraction (Tika)**:
+- `TIKA_ENDPOINT`: Apache Tika endpoint
 
 **System**:
 - `SYSTEM_DASHBOARD_ENABLED`: `True|False`

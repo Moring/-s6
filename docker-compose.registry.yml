@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  registry:
+    image: registry:2
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=AfterResume Registry
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+    volumes:
+      - registry-data:/var/lib/registry
+      - ./registry/htpasswd:/auth/htpasswd:ro
+    networks:
+      - traefik
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == dokploy
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik"
+        - "traefik.http.routers.registry.rule=Host(`${REGISTRY_HOST}`)"
+        - "traefik.http.routers.registry.entrypoints=web"
+        - "traefik.http.routers.registry.middlewares=registry-auth"
+        - "traefik.http.middlewares.registry-auth.basicauth.users=davmor:$$apr1$$X6LtLHYG$$AgCFShLV6/5857M73cnDF."
+        - "traefik.http.services.registry.loadbalancer.server.port=5000"
+
+volumes:
+  registry-data:
+
+networks:
+  traefik:
+    external: true
+    name: traefik

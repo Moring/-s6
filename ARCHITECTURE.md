@@ -6,7 +6,7 @@ AfterResume is a multi-tenant SaaS platform for managing work logs, skills track
 ## Service Architecture
 
 ### Service Boundaries
-- **Frontend**: Vue SPA frontend (Node-based runtime for serving SPA assets and proxying `/api/*`)
+- **Frontend**: Vue SPA served by Caddy in production, with a Node proxy sidecar for `/api/*` (service-token injection)
 - **Backend**: Django + DRF orchestration service (AI workflows, persistence, storage, jobs, observability)
 - **Manager**: Dokploy (deployment control plane)
 

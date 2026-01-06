@@ -26,6 +26,9 @@ npm run start
 
 `npm run start` serves `dist/` and proxies `/api/*` to the backend with service auth.
 
+For Docker production, `frontend/Dockerfile.prod` serves the built SPA with Caddy and expects
+the Node proxy container (`frontend/Dockerfile`) to handle `/api/*` requests.
+
 ## Tests + Lint
 
 ```bash

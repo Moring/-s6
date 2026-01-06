@@ -256,10 +256,14 @@ MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_SECURE = os.environ.get('MINIO_SECURE', 'False') == 'True'
 MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'afterresume')
 
+# Tika
+TIKA_ENDPOINT = os.environ.get('TIKA_ENDPOINT', 'http://tika:9998')
+
 # LLM configuration
 LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'local')
 LLM_VLLM_ENDPOINT = os.environ.get('LLM_VLLM_ENDPOINT', 'http://localhost:8000')
 LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4')
+OLLAMA_ENDPOINT = os.environ.get('OLLAMA_ENDPOINT', 'http://ollama:11434')
 
 # System dashboard
 SYSTEM_DASHBOARD_ENABLED = os.environ.get('SYSTEM_DASHBOARD_ENABLED', 'True') == 'True'

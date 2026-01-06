@@ -150,9 +150,14 @@ cd frontend && npm test
 │   ├── server/                 # Node runtime + /api proxy
 │   ├── Dockerfile
 │   ├── Dockerfile.prod
+│   ├── Caddyfile
 │   ├── docker-compose.yml
 │   └── nginx.conf
 │
+├── docker-compose.frontend.yml # Swarm/Dokploy frontend stack
+├── docker-compose.backend.yml  # Swarm/Dokploy backend stack
+├── docker-compose.registry.yml # Swarm/Dokploy registry stack
+├── registry/                   # Registry auth config
 ├── .env.example                # Environment template
 ├── Taskfile.yml                # Task definitions
 └── README.md                   # This file
@@ -209,9 +214,15 @@ BACKEND_BASE_URL=http://backend-api:8000
 # Frontend runtime (Node proxy)
 BACKEND_ORIGIN=http://backend-api:8000
 SERVICE_TO_SERVICE_SECRET=change-me
+FRONTEND_HOST=agentic.digimuse.ai
+REGISTRY_HOST=registry.agentic.digimuse.ai
+
+# Tika
+TIKA_ENDPOINT=http://tika:9998
 
 # LLM Provider
-LLM_PROVIDER=local  # 'local' for fake provider, 'vllm' for real
+LLM_PROVIDER=local  # local/vllm/ollama
+OLLAMA_ENDPOINT=http://ollama:11434
 ```
 
 ## 🧪 Testing
@@ -398,18 +409,21 @@ For production deployment:
    - Configure real database credentials
    - Set proper `DJANGO_ALLOWED_HOSTS`
 
-2. **Use production images**
-   - Build with `--target production`
-   - Use gunicorn instead of runserver
-   - Configure nginx reverse proxy
+2. **Deploy Dokploy stacks**
+   - Create overlay networks `traefik` and `backend`
+   - Deploy `docker-compose.frontend.yml`, `docker-compose.backend.yml`, `docker-compose.registry.yml`
 
-3. **Secure services**
+3. **Use production images**
+   - Frontend uses `frontend/Dockerfile.prod` (Caddy + built SPA)
+   - Use gunicorn instead of runserver (backend)
+
+4. **Secure services**
    - Enable SSL/TLS
    - Use secrets management
    - Configure firewall rules
    - Enable authentication
 
-4. **Scale workers**
+5. **Scale workers**
    - Run multiple worker containers
    - Use load balancer for API
    - Configure Redis Sentinel

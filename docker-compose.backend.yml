@@ -1,0 +1,148 @@
+version: "3.9"
+
+services:
+  backend-api:
+    build:
+      context: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=${DEBUG:-0}
+    networks:
+      backend:
+        aliases:
+          - backend-api
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+    depends_on:
+      - postgres
+      - valkey
+      - minio
+      - tika
+      - ollama
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/healthz/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend-worker:
+    build:
+      context: ./backend
+    command: python manage.py run_huey
+    env_file:
+      - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=${DEBUG:-0}
+    networks:
+      - backend
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+    depends_on:
+      - backend-api
+      - valkey
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-afterresume}
+      - POSTGRES_USER=${POSTGRES_USER:-afterresume}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - postgres
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-afterresume} -d ${POSTGRES_DB:-afterresume}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:latest
+    volumes:
+      - valkey-data:/data
+    networks:
+      backend:
+        aliases:
+          - valkey
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    networks:
+      backend:
+        aliases:
+          - minio
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tika:
+    image: apache/tika:latest
+    networks:
+      backend:
+        aliases:
+          - tika
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      backend:
+        aliases:
+          - ollama
+    deploy:
+      placement:
+        constraints:
+          - node.labels.role == backend
+
+volumes:
+  postgres-data:
+  valkey-data:
+  minio-data:
+  ollama-data:
+
+networks:
+  backend:
+    external: true
+    name: backend
