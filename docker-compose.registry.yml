@@ -28,7 +28,4 @@ services:
 volumes:
   registry-data:
 
-networks:
-  traefik:
-    external: true
-    name: traefik
+
