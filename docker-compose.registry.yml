@@ -10,8 +10,6 @@ services:
     volumes:
       - registry-data:/var/lib/registry
       - ./registry/htpasswd:/auth/htpasswd:ro
-    networks:
-      - traefik
     deploy:
       placement:
         constraints:
