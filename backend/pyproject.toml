@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AfterResume Backend - AI-powered work tracking and resume generation"
 requires-python = ">=3.11"
 dependencies = [
-    "django>=5.0,<6.0",
+    "django>=5.0",
     "djangorestframework>=3.14",
     "psycopg2-binary>=2.9",
     "huey>=2.5",
@@ -19,7 +19,7 @@ dependencies = [
     "stripe>=7.0",
     "django-ratelimit>=4.1",
     "djangorestframework-simplejwt>=5.3",
-    "drf-spectacular>=1.3",
+    "drf-spectacular>=0.29.0",
 ]
 
 [project.optional-dependencies]
