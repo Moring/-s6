@@ -1,15 +1,32 @@
 version: "3.9"
 
 services:
+  registry-init:
+    image: httpd:2
+    entrypoint: ["/bin/sh","-c"]
+    command: >
+      mkdir -p /auth && \
+      htpasswd -Bbn "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" > /auth/htpasswd || exit 1 && \
+      # tighten permissions so the file isn't world-readable
+      chmod 640 /auth/htpasswd || true
+    volumes:
+      - ./registry:/auth
+    environment:
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
+    restart: "no"
+
   registry:
     image: registry:2
     environment:
       - REGISTRY_AUTH=htpasswd
-      - REGISTRY_AUTH_HTPASSWD_REALM=AfterResume Registry
+      - REGISTRY_AUTH_HTPASSWD_REALM=DigiMuse.ai Registry
       - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
     volumes:
       - registry-data:/var/lib/registry
       - ./registry/htpasswd:/auth/htpasswd:ro
+    depends_on:
+      - registry-init
     deploy:
       placement:
         constraints:
@@ -20,10 +37,10 @@ services:
         - "traefik.http.routers.registry.rule=Host(`${REGISTRY_HOST}`)"
         - "traefik.http.routers.registry.entrypoints=web"
         - "traefik.http.routers.registry.middlewares=registry-auth"
-        - "traefik.http.middlewares.registry-auth.basicauth.users=davmor:$$apr1$$X6LtLHYG$$AgCFShLV6/5857M73cnDF."
+          # Avoid embedding hashed credentials here; prefer mounting the same htpasswd file
+          # into Traefik's dynamic config or use Traefik secrets so there's a single source of truth.
+          # Example: mount ./registry/htpasswd into Traefik and reference it from a file provider.
         - "traefik.http.services.registry.loadbalancer.server.port=5000"
 
 volumes:
   registry-data:
-
-

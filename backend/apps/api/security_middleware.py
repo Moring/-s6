@@ -13,28 +13,35 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         # Content Security Policy
+        # Build CSP allowing optional extra sources configured in settings.CSP_EXTRA_SRC
+        extra_src = getattr(settings, 'CSP_EXTRA_SRC', []) or []
+        # join any provided extra hosts into directives
+        extra_script_src = ' '.join(extra_src) if extra_src else ''
+        extra_style_src = ' '.join(extra_src) if extra_src else ''
+        extra_connect_src = ' '.join(extra_src) if extra_src else ''
+
         if not settings.DEBUG:
-            # Production CSP - strict
+            # Production CSP - strict, but include any configured extras
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-                "style-src 'self' 'unsafe-inline'; "
+                f"script-src 'self' 'unsafe-inline' 'unsafe-eval' {extra_script_src}; "
+                f"style-src 'self' 'unsafe-inline' {extra_style_src}; "
                 "img-src 'self' data: https:; "
                 "font-src 'self' data:; "
-                "connect-src 'self'; "
+                f"connect-src 'self' {extra_connect_src}; "
                 "frame-ancestors 'none'; "
                 "base-uri 'self'; "
                 "form-action 'self';"
             )
         else:
-            # Development CSP - relaxed
+            # Development CSP - relaxed, include extras and ws
             csp = (
                 "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-                "style-src 'self' 'unsafe-inline'; "
+                f"script-src 'self' 'unsafe-inline' 'unsafe-eval' {extra_script_src}; "
+                f"style-src 'self' 'unsafe-inline' {extra_style_src}; "
                 "img-src 'self' data: https:; "
                 "font-src 'self' data:; "
-                "connect-src 'self' ws: wss:; "
+                f"connect-src 'self' ws: wss: {extra_connect_src}; "
             )
         response['Content-Security-Policy'] = csp
         

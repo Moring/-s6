@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -155,6 +156,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
     'DEFAULT_RENDERER_CLASSES': [
@@ -296,6 +298,20 @@ REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = [
 ]
 REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = [
     'rest_framework.permissions.IsAuthenticated',
+]
+
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AfterResume API',
+    'DESCRIPTION': 'API schema for AfterResume backend',
+    'VERSION': os.environ.get('API_VERSION', '0.1.0'),
+    # Other settings can be added as needed
+}
+
+# Content Security Policy: allow extra hosts (used by SecurityHeadersMiddleware)
+# Include jsDelivr so the default Spectacular Swagger UI CDN assets can load.
+CSP_EXTRA_SRC = [
+    'https://cdn.jsdelivr.net',
 ]
 
 # Cache configuration (Valkey/Redis)

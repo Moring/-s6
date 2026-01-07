@@ -7,8 +7,6 @@ services:
       - "3000:3000"
     env_file:
       - ../.env
-    networks:
-      - afterresume-net
 
   # Production static frontend served by Caddy (builds the app and serves /dist)
   frontend_prod:
@@ -22,9 +20,5 @@ services:
       - "80:80"
     env_file:
       - ../.env
-    networks:
-      - afterresume-net
 
-networks:
-  afterresume-net:
-    external: true
+

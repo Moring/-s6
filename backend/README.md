@@ -162,7 +162,7 @@ install_dokploy() {
         exit 1
     fi
 
-    advertise_addr="10.6.0.2"
+    advertise_addr="10.6.0.3"
     echo "Using existing swarm (advertise address: $advertise_addr)"
 
     # ---- Network ----
@@ -230,7 +230,7 @@ install_dokploy() {
     echo "========================================"
     echo " Dokploy installed using existing swarm "
     echo "========================================"
-    echo "Access: http://10.6.0.2:3000"
+    echo "Access: http://10.6.0.3:3000"
     echo ""
 }
 

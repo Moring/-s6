@@ -19,6 +19,7 @@ dependencies = [
     "stripe>=7.0",
     "django-ratelimit>=4.1",
     "djangorestframework-simplejwt>=5.3",
+    "drf-spectacular>=1.3",
 ]
 
 [project.optional-dependencies]
