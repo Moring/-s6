@@ -1,15 +1,19 @@
 export function getColor(v: string, a: number = 1) {
-  const html = document.documentElement
-  if (!html) return ''
+    if (typeof window === 'undefined') return ''
 
-  const val = getComputedStyle(document.documentElement).getPropertyValue(`--ins-${v}`).trim()
+    const html = document.documentElement
+    if (!html) return ''
 
-  return v.includes('-rgb') ? `rgba(${val}, ${a})` : val
+    const val = getComputedStyle(document.documentElement)
+        .getPropertyValue(`--ins-${v}`)
+        .trim();
+
+    return v.includes('-rgb') ? `rgba(${val}, ${a})` : val;
 }
 
 export function getDefaultFontFamily(): string {
-  const body = document.body
-  if (!body) return ''
-  const font = getComputedStyle(body).fontFamily
-  return font ?? ''
+    const body = document.body
+    if (!body) return ''
+    const font = getComputedStyle(body).fontFamily
+    return font ?? ''
 }

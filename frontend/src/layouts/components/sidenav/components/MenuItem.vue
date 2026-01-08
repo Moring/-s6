@@ -10,7 +10,7 @@
       <span v-if="item.badge" :class="`badge text-bg-${item.badge.variant} opacity-50`">{{
         item.badge.text
       }}</span>
-    </RouterLink>
+    </RouterLink>   
   </li>
 </template>
 

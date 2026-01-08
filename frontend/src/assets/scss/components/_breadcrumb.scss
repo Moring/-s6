@@ -4,15 +4,15 @@
 
 // Breadcrumb item arrow
 .breadcrumb-item {
-  a {
-    color: var(--#{$prefix}body-color);
+    a {
+        color: var(--#{$prefix}body-color);
 
-    &:hover {
-      color: var(--#{$prefix}primary);
+        &:hover {
+            color: var(--#{$prefix}primary);
+        }
     }
-  }
 }
 
 .breadcrumb-arrow {
-  color: $breadcrumb-divider-color;
+    color: $breadcrumb-divider-color;
 }

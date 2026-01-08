@@ -35,7 +35,7 @@
             name="search"
             placeholder="Search for something..."
           />
-          <Icon icon="lucide:search" size="18" class="app-search-icon text-muted" />
+          <Icon icon="lucide:search"  class="app-search-icon text-muted" />
         </div>
 
         <MegaMenu />

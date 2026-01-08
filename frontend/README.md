@@ -1,37 +1,39 @@
-# AfterResume Frontend (Vue SPA)
+# inspinia
 
-Chat-first Vue single-page app that proxies API requests to the backend over `/api/*`.
+This template should help get you started developing with Vue 3 in Vite.
 
-## Requirements
+## Recommended IDE Setup
 
-- Node.js 18+
-- Backend reachable via WireGuard (or localhost for dev)
-- `BACKEND_ORIGIN` and `SERVICE_TO_SERVICE_SECRET` set in `.env` (local) or `dokploy.env` (Dokploy)
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
 
-## Local Development
+## Type Support for `.vue` Imports in TS
 
-```bash
+TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
 npm install
+```
+
+### Compile and Hot-Reload for Development
+
+```sh
 npm run dev
 ```
 
-The dev server proxies `/api/*` to `BACKEND_ORIGIN` and injects `X-Service-Token`.
+### Type-Check, Compile and Minify for Production
 
-## Build + Run (Production)
-
-```bash
+```sh
 npm run build
-npm run start
 ```
 
-`npm run start` serves `dist/` and proxies `/api/*` to the backend with service auth.
+### Lint with [ESLint](https://eslint.org/)
 
-For Docker production, `frontend/Dockerfile.prod` serves the built SPA with Caddy and expects
-the Node proxy container (`frontend/Dockerfile`) to handle `/api/*` requests.
-
-## Tests + Lint
-
-```bash
-npm test
+```sh
 npm run lint
 ```
