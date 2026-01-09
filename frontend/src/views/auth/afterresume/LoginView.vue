@@ -7,7 +7,7 @@
             <BCardBody class="p-4">
               <!-- Logo -->
               <div class="text-center mb-4">
-                <img src="@/assets/images/logo-dark.png" alt="AfterResume" height="40" class="mb-3" />
+                <img src="@/assets/images/logo.png" alt="AfterResume" height="40" class="mb-3" />
                 <h4 class="fw-bold">Sign In</h4>
                 <p class="text-muted">Welcome back! Please sign in to continue.</p>
               </div>

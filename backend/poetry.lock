@@ -630,6 +630,22 @@ socialaccount = ["oauthlib (>=3.3.0,<4)", "pyjwt[crypto] (>=2.0,<3)", "requests 
 steam = ["python3-openid (>=3.0.8,<4)"]
 
 [[package]]
+name = "django-cors-headers"
+version = "4.9.0"
+description = "django-cors-headers is a Django application for handling the server headers required for Cross-Origin Resource Sharing (CORS)."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "django_cors_headers-4.9.0-py3-none-any.whl", hash = "sha256:15c7f20727f90044dcee2216a9fd7303741a864865f0c3657e28b7056f61b449"},
+    {file = "django_cors_headers-4.9.0.tar.gz", hash = "sha256:fe5d7cb59fdc2c8c646ce84b727ac2bca8912a247e6e68e1fb507372178e59e8"},
+]
+
+[package.dependencies]
+asgiref = ">=3.6"
+django = ">=4.2"
+
+[[package]]
 name = "django-ratelimit"
 version = "4.1.0"
 description = "Cache-based rate-limiting for Django."
@@ -1879,4 +1895,4 @@ dev = ["black", "pytest", "pytest-cov", "pytest-django", "ruff"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "b0bcd7fdb4f39b9c0d8ffb5b76da86e86aeeea288af370ae7e6ae82d052cb8e1"
+content-hash = "698c29be756f4e0bdfc6ca00ff23fbd11f52746d869b826e19fea52928be9d76"

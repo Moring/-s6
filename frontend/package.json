@@ -29,6 +29,7 @@
         "animate.css": "^4.1.1",
         "apexcharts": "^5.3.4",
         "apextree": "^1.4.3",
+        "axios": "^1.13.2",
         "bootstrap": "^5.3.6",
         "bootstrap-vue-next": "^0.30.0",
         "choices.js": "^11.1.0",

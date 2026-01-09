@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'huey.contrib.djhuey',
+        'corsheaders',
     # Core apps
     'apps.tenants',
     'apps.accounts',
@@ -73,6 +74,7 @@ MIDDLEWARE = [
     'apps.api.security_middleware.IPAllowlistMiddleware',
     'apps.api.security_middleware.MaintenanceModeMiddleware',
     'apps.observability.correlation.CorrelationIDMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -236,6 +238,11 @@ LOGGING = {
 # Service-to-service authentication
 SERVICE_TO_SERVICE_SECRET = os.environ.get('SERVICE_TO_SERVICE_SECRET', SECRET_KEY)
 SKIP_SERVICE_AUTH = os.environ.get('SKIP_SERVICE_AUTH', 'False') == 'True'
+
+# CORS settings for local frontend development
+# Allow requests from the frontend dev server and enable credentials for cookie-based auth
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
 
 # Feature flags
 MAINTENANCE_MODE = os.environ.get('MAINTENANCE_MODE', 'False') == 'True'
