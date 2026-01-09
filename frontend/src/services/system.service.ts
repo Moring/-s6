@@ -97,6 +97,18 @@ class SystemService {
       throw new Error(handleApiError(error))
     }
   }
+
+  /**
+   * Get readyz data (comprehensive health check)
+   */
+  async getReadyz(): Promise<any> {
+    try {
+      const response = await apiClient.get('/api/readyz/')
+      return response.data
+    } catch (error) {
+      throw new Error(handleApiError(error))
+    }
+  }
 }
 
 export const systemService = new SystemService()

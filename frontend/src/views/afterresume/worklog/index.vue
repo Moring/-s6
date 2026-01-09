@@ -3,6 +3,16 @@
         <BContainer fluid>
             <PageBreadcrumb title="Worklog" />
             
+            <!-- AI Assistant -->
+            <BRow class="mb-3">
+                <BCol cols="12">
+                    <AIChatInput 
+                        placeholder="Ask me anything about your worklog, need help writing an entry, or want suggestions..."
+                        context="worklog"
+                    />
+                </BCol>
+            </BRow>
+
             <!-- Quick Add Section -->
             <BRow class="mb-3">
                 <BCol cols="12">
@@ -240,6 +250,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import PageBreadcrumb from '@/components/PageBreadcrumb.vue'
+import AIChatInput from '@/components/AIChatInput.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import MainLayout from '@/layouts/MainLayout.vue'
 import UICard from '@/components/UICard.vue'

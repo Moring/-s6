@@ -1,14 +1,18 @@
 export const allRoutes = [
-    // Default route - redirect to login
+    // Default route - redirect to dashboard if authenticated, otherwise login
     {
         path: '/',
-        redirect: '/auth/login',
+        redirect: (to: any) => {
+            // This will be handled by the router guard
+            return '/auth/login'
+        },
     },
 
     // AfterResume Routes (protected)
     {
         path: '/afterresume',
         meta: { requiresAuth: true },
+        redirect: '/afterresume/dashboard',
         children: [
             {
                 path: 'dashboard',

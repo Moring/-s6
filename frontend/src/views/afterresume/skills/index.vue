@@ -3,6 +3,16 @@
         <BContainer fluid>
             <PageBreadcrumb title="Skills Library" />
 
+            <!-- AI Assistant -->
+            <BRow class="mb-3">
+                <BCol cols="12">
+                    <AIChatInput 
+                        placeholder="Ask about your skills, request analysis, or get career advice..."
+                        context="skills"
+                    />
+                </BCol>
+            </BRow>
+
             <!-- Header Actions -->
             <BRow class="mb-3">
                 <BCol cols="12">
@@ -207,6 +217,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import PageBreadcrumb from '@/components/PageBreadcrumb.vue'
+import AIChatInput from '@/components/AIChatInput.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import MainLayout from '@/layouts/MainLayout.vue'
 import UICard from '@/components/UICard.vue'

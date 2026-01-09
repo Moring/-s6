@@ -228,7 +228,7 @@ const loadingSkills = ref(true)
 const loadingGamification = ref(true)
 
 const navigateTo = (path: string) => {
-    router.push(path)
+    router.push(`/afterresume${path}`)
 }
 
 const formatDate = (date: string) => {

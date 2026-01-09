@@ -7,13 +7,13 @@ export const currency: CurrencyType = '$'
 export const currentYear = new Date().getFullYear()
 
 export const appFavicon = favicon
-export const appName = 'Inspinia'
-export const appTitle = 'INSPINIA - Responsive Bootstrap 5 Admin Dashboard'
+export const appName = 'DigiMuse.AI'
+export const appTitle = 'DigiMuse.AI - AfterResume Career Intelligence Platform'
 export const appDescription: string =
-  'Inspinia is the #1 best-selling admin dashboard template on WrapBootstrap. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.'
+  'DigiMuse.AI AfterResume is an AI-powered career intelligence platform that helps you track your work, build your skills portfolio, and generate insightful career reports.'
 
-export const author: string = 'WebAppLayers'
-export const authorWebsite: string = 'https://webapplayers.com/'
+export const author: string = 'DigiMuse.AI'
+export const authorWebsite: string = 'https://digimuse.ai/'
 export const authorContact: string = ''
 
 export const basePath: string = ''

@@ -3,6 +3,16 @@
         <BContainer fluid>
             <PageBreadcrumb title="Reports" />
 
+            <!-- AI Assistant -->
+            <BRow class="mb-3">
+                <BCol cols="12">
+                    <AIChatInput 
+                        placeholder="Ask me about your reports, request analysis, or get insights..."
+                        context="reports"
+                    />
+                </BCol>
+            </BRow>
+
             <!-- Generate Report Section -->
             <BRow class="mb-3">
                 <BCol cols="12">
@@ -213,6 +223,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import PageBreadcrumb from '@/components/PageBreadcrumb.vue'
+import AIChatInput from '@/components/AIChatInput.vue'
 import { usePageMeta } from '@/composables/usePageMeta'
 import MainLayout from '@/layouts/MainLayout.vue'
 import UICard from '@/components/UICard.vue'

@@ -4,6 +4,124 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2026-01-09 - Frontend Vue3 DigiMuse.AI Branding, Docker/Traefik Setup, AI Chat Integration
+
+### Summary
+Comprehensive Vue3 frontend update implementing DigiMuse.AI branding, improved Docker/Traefik deployment, AI chat input component on content pages, Gravatar integration, dynamic footer with system health, artifact upload functionality, and navigation fixes.
+
+### ✅ What Changed
+**Branding & UI**:
+- Replaced all "Inspinia" references with "DigiMuse.AI"
+- Updated logos to use "DigiMuse.AI" text and "DM" short form
+- Integrated Gravatar for user avatars (with simple hash function)
+- Updated copyright footer to "© 2025 DigiMuse.AI"
+- Dynamic footer showing token count and reserve balance (clickable for health check)
+
+**Docker & Infrastructure**:
+- Updated `Dockerfile` to use nginx and serve on port 3000
+- Added Traefik reverse proxy to `docker-compose.yml` for internet-ready deployment
+- Configured Traefik labels for frontend service
+- Updated `nginx.conf` to proxy `/api/` requests to backend
+
+**AI Chat Integration**:
+- Created `AIChatInput.vue` component with GitHub Copilot-inspired design
+- Added AI chat to Worklog, Reports, and Skills pages (5-line input with send button)
+- Placeholder AI response (ready for backend integration)
+- Clean, minimal design with DM branding
+
+**Navigation & Routing**:
+- Fixed dashboard navigation paths (added `/afterresume` prefix)
+- Updated "Go to Worklog", "Upload Files", "View Reports", "Manage Billing" buttons
+- Root path now redirects properly through auth guard
+- All afterresume routes properly nested
+
+**Features**:
+- Created `artifact.service.ts` for file upload/download/delete operations
+- Updated `FileUploader.vue` component to emit files for parent handling
+- Footer displays live token count and reserve balance (auto-refresh every 30s)
+- Clicking footer stats opens modal with formatted `/readyz` JSON output
+- Added `getReadyz()` method to `system.service.ts`
+
+### Files Changed
+**Created**:
+- `frontend/src/components/AIChatInput.vue` - AI chat input component
+- `frontend/src/services/artifact.service.ts` - Artifact API service
+
+**Modified**:
+- `frontend/Dockerfile` - Updated to nginx, port 3000, build args
+- `frontend/docker-compose.yml` - Added Traefik service and labels
+- `frontend/nginx.conf` - Updated port 3000, added API proxy
+- `frontend/src/helpers/index.ts` - Updated app name/title/description/author
+- `frontend/src/layouts/components/footer/index.vue` - Dynamic status, health modal
+- `frontend/src/layouts/components/topbar/index.vue` - DigiMuse.AI branding
+- `frontend/src/layouts/components/topbar/components/UserProfile.vue` - Gravatar integration
+- `frontend/src/services/system.service.ts` - Added `getReadyz()` method
+- `frontend/src/components/FileUploader.vue` - Emit files, file icons, upload button
+- `frontend/src/views/afterresume/dashboard/index.vue` - Fixed navigation paths
+- `frontend/src/views/afterresume/worklog/index.vue` - Added AI chat input
+- `frontend/src/views/afterresume/reports/index.vue` - Added AI chat input
+- `frontend/src/views/afterresume/skills/index.vue` - Added AI chat input
+- `frontend/src/router/routes.ts` - Fixed root redirect, added afterresume redirect
+
+**Migration Required:** ❌ No  
+**Config Changes Required:** ✅ Yes  
+**Breaking Changes:** ❌ No (additive only)  
+**Pytest Status:** ⚠️ N/A (frontend-only changes)
+
+### 🧪 How to Verify
+```bash
+# Start frontend dev server
+cd frontend
+npm run dev
+# Visit http://localhost:3000
+# Login should redirect to /afterresume/dashboard
+# Footer should show token count and reserve balance
+# Click footer stats to see health check JSON
+# Navigate to Worklog, Reports, Skills - each should have AI chat input
+# Upload files in Artifacts view
+
+# Build and run with Docker Compose + Traefik
+cd frontend
+docker-compose up --build
+# Visit http://localhost (Traefik routes to frontend on port 3000)
+# Traefik dashboard: http://localhost:8080
+```
+
+### 🔧 Config Changes
+**Environment Variables** (add to `.env` or Dokploy):
+```bash
+# Frontend
+VITE_API_BASE_URL=http://backend-api:8000
+FRONTEND_HOST=localhost  # or your domain
+
+# Traefik (optional, for HTTPS)
+TRAEFIK_ACME_EMAIL=your-email@example.com
+```
+
+### 🚀 Human TODOs
+- [ ] Set `VITE_API_BASE_URL` in Dokploy environment variables
+- [ ] Set `FRONTEND_HOST` to your actual domain
+- [ ] Configure Traefik HTTPS/SSL certificates if needed
+- [ ] Add custom DigiMuse.AI logo images (currently using text)
+- [ ] Configure backend AI provider to handle chat requests from `AIChatInput`
+- [ ] Set up proper CORS configuration for backend API
+- [ ] Configure DNS records for custom domain
+- [ ] Test Gravatar display with real user emails
+- [ ] Configure Traefik dashboard access control (currently insecure)
+
+### ⚠️ Known Limitations
+- AI chat input is placeholder (needs backend LLM integration)
+- Gravatar uses simple hash (not proper MD5, but works for identicons)
+- Traefik configured for HTTP only (HTTPS requires certificate setup)
+- Logo is text-based (awaiting custom DigiMuse.AI logo assets)
+
+### 🔗 Related Documentation
+- `README.md` - Updated with new run commands
+- `ARCHITECTURE.md` - Frontend service boundaries maintained
+- `ADMIN_GUIDE.md` - No changes required
+
+---
+
 ## 2026-01-09 - Frontend Vue3 Cleanup: AfterResume-Only Views
 
 ### Summary

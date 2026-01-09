@@ -1,10 +1,10 @@
 # AfterResume - Complete System
 
-AI-powered work tracking and resume generation system with Django + DRF backend and a Vue SPA frontend (Node-based build/runtime), running in Docker.
+AI-powered career intelligence platform with Django + DRF backend and Vue 3 SPA frontend, running in Docker with Traefik reverse proxy.
 
 **Status**: ✅ Production-Ready Core (100% Core Features, 75% Advanced Features)  
 **Version**: 1.0.0  
-**Last Updated**: 2025-12-31
+**Last Updated**: 2026-01-09
 
 ## ✨ Key Features
 
@@ -12,9 +12,11 @@ AI-powered work tracking and resume generation system with Django + DRF backend 
 - ✅ **Invite-only signup** - Secure passkey-based onboarding
 - ✅ **JWT authentication** - Short-lived access tokens + refresh cookies
 - ✅ **Worklog management** - Track work entries with rich metadata
+- ✅ **Skills Library** - Evidence-based skills extraction from work
+- ✅ **AI Chat Integration** - Context-aware AI assistant on content pages
 - ✅ **Billing system** - Stripe integration with reserve balances
 - ✅ **Admin dashboards** - User management, billing, and metrics
-- ✅ **Real-time status** - Live updates via API polling
+- ✅ **Real-time status** - Live updates via API polling (footer stats)
 - ✅ **Job processing** - Async background tasks with Huey
 - ✅ **Object storage** - MinIO for file uploads and artifacts
 - ✅ **Comprehensive audit** - Full event logging for compliance
@@ -25,23 +27,36 @@ AI-powered work tracking and resume generation system with Django + DRF backend 
 # 1. Copy environment file
 cp .env.example .env
 
-# 2. Start all services
+# 2. Start all services (backend + frontend + Traefik)
 task up
 
-# 3. Run migrations and seed data
+# 3. Run migrations and create admin user
 task bootstrap
 
 # 4. Access the system
-# Frontend: http://localhost:3000
+# Frontend: http://localhost (via Traefik)
 # Backend API: http://localhost:8000
+# Traefik Dashboard: http://localhost:8080
 # MinIO Console: http://localhost:9001
 ```
 
-Note: The Vue SPA frontend is built in `frontend/` (see `frontend/README.md`). The frontend container serves the SPA
-and proxies `/api/*` to the backend with service auth.
+### Development Mode
 
-Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT access token in memory, and refreshes via
-`/api/auth/token/refresh/` using an HttpOnly refresh cookie.
+```bash
+# Frontend dev server (hot reload)
+cd frontend
+npm run dev
+# Access: http://localhost:3000
+
+# Backend dev server
+cd backend
+python manage.py runserver
+# Access: http://localhost:8000
+```
+
+Note: The Vue 3 SPA frontend is built in `frontend/` (see `frontend/README.md`). The production frontend container serves the SPA via nginx on port 3000, with Traefik handling routing and SSL termination.
+
+Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT access token, and refreshes via `/api/auth/token/refresh/` using an HttpOnly refresh cookie.
 
 ## 📦 System Architecture
 
@@ -49,11 +64,14 @@ Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT acc
 ┌─────────────────────────────────────────────────────────┐
 │                  AfterResume System                     │
 │                                                         │
+│  Traefik (Ports 80/443)                                │
+│  └─ Reverse Proxy + SSL                                │
+│                                                         │
 │  Frontend (Port 3000)          Backend (Port 8000)     │
-│  ├─ Vue SPA + Node runtime     ├─ Django + DRF API     │
-│  ├─ SPA assets + /api proxy    ├─ Postgres Database    │
-│  └─ X-Service-Token injection  ├─ Valkey Queue         │
-│                                 ├─ MinIO Storage        │
+│  ├─ Vue 3 SPA (nginx)          ├─ Django + DRF API     │
+│  ├─ DigiMuse.AI Branding       ├─ Postgres Database    │
+│  ├─ AI Chat Integration        ├─ Valkey Queue         │
+│  └─ Gravatar Avatars           ├─ MinIO Storage        │
 │                                 ├─ Huey Workers         │
 │                                 └─ AI Agents + LLM      │
 └─────────────────────────────────────────────────────────┘
@@ -69,10 +87,11 @@ Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT acc
 
 | Service | Port | Description |
 |---------|------|-------------|
-| Frontend | 3000 | Web UI (Vue SPA, Node-based) |
+| Traefik | 80, 443, 8080 | Reverse proxy & SSL (dashboard: 8080) |
+| Frontend | 3000 | Web UI (Vue 3 SPA, nginx) |
 | Backend API | 8000 | REST API (Django + DRF) |
 | Postgres | 5432 | Primary database |
-| Valkey (Backend) | 6379 | Job queue |
+| Valkey | 6379 | Job queue |
 | MinIO | 9000 | Object storage |
 | MinIO Console | 9001 | Storage admin UI |
 

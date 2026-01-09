@@ -3,21 +3,21 @@
     <div class="container-fluid topbar-menu">
       <div class="d-flex align-items-center gap-2">
         <div class="logo-topbar">
-          <RouterLink to="/" class="logo-light">
+          <RouterLink to="/afterresume/dashboard" class="logo-light">
             <span class="logo-lg">
-              <img :src="logo" alt="logo" />
+              <span class="fw-bold fs-4">DigiMuse.AI</span>
             </span>
             <span class="logo-sm">
-              <img :src="logoSm" alt="small logo" />
+              <span class="fw-bold fs-4">DM</span>
             </span>
           </RouterLink>
 
-          <RouterLink to="/" class="logo-dark">
+          <RouterLink to="/afterresume/dashboard" class="logo-dark">
             <span class="logo-lg">
-              <img :src="logoDark" alt="dark logo" />
+              <span class="fw-bold fs-4">DigiMuse.AI</span>
             </span>
             <span class="logo-sm">
-              <img :src="logoSm" alt="small logo" />
+              <span class="fw-bold fs-4">DM</span>
             </span>
           </RouterLink>
         </div>
@@ -68,10 +68,6 @@ import ThemeToggler from '@/layouts/components/topbar/components/ThemeToggler.vu
 import UserProfile from '@/layouts/components/topbar/components/UserProfile.vue'
 import { useLayout } from '@/stores/layout.ts'
 import { Icon } from '@iconify/vue'
-
-import logo from '@/assets/images/logo.png'
-import logoSm from '@/assets/images/logo-sm.png'
-import logoDark from '@/assets/images/logo-black.png'
 
 const { layout, setSideNavSize, toggleMobileMenu } = useLayout()
 
