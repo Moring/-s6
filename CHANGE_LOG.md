@@ -4,6 +4,80 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2026-01-09 - Frontend Vue3 Cleanup: AfterResume-Only Views
+
+### Summary
+Cleaned up the Vue3 frontend to remove all demo/example views and keep only AfterResume core features and authentication. Updated routing, navigation menus, and created admin dashboard view with full admin service integration.
+
+### ✅ What Changed
+- **Removed demo views**: Deleted all sample apps, dashboards, forms, graphs, icons, maps, metrics, miscellaneous, other-apps, other-pages, pages, tables, UI demos, and widgets
+- **Kept essential views**: Login, Signup, Dashboard, Worklog, Skills, Reports, Artifacts, Billing, Admin
+- **Cleaned routes**: Simplified `routes.ts` to only include AfterResume and auth routes
+- **Updated navigation**: Simplified `data.ts` menu configuration to AfterResume-only items
+- **Created admin service**: Full TypeScript service for all admin endpoints (users, passkeys, audit, failed jobs, system controls, rate limits, gamification)
+- **Created admin dashboard**: Comprehensive admin view with tabs for users, passkeys, failed jobs, and audit logs
+- **Updated router guards**: Ensured proper redirect to AfterResume dashboard after login
+
+### Files Changed
+**Deleted**:
+- `src/views/apps/` (entire directory)
+- `src/views/dashboards/` (entire directory)
+- `src/views/forms/`, `src/views/graphs/`, `src/views/icons/`, `src/views/landing/`
+- `src/views/maps/`, `src/views/metrics/`, `src/views/miscellaneous/`
+- `src/views/other-apps/`, `src/views/other-pages/`, `src/views/pages/`
+- `src/views/tables/`, `src/views/ui/`, `src/views/widgets/`
+- `src/views/auth/auth-1/`, `src/views/auth/auth-2/`, `src/views/auth/components/`
+- `src/router/routes.old.ts`, `src/layouts/components/data.ts.old`
+
+**Modified**:
+- `src/router/routes.ts` - Simplified to AfterResume + auth routes only
+- `src/router/index.ts` - Updated dashboard redirect path
+- `src/layouts/components/data.ts` - Simplified menu to AfterResume items only
+
+**Created**:
+- `src/services/admin.service.ts` - Complete admin API service with TypeScript types
+- `src/views/afterresume/admin/index.vue` - Full-featured admin dashboard
+
+**Migration Required:** ❌ No  
+**Config Changes Required:** ❌ No  
+**Breaking Changes:** ⚠️ Yes (removed all demo views)  
+**Pytest Status:** ⚠️ N/A (frontend-only changes)
+
+### 🧪 How to Verify
+```bash
+# Start frontend dev server
+cd frontend
+npm run dev
+
+# Visit http://localhost:3001 and verify:
+# - Redirects to /auth/login when not authenticated
+# - Login form displays correctly
+# - After login, navigates to /afterresume/dashboard
+# - Menu shows only: Dashboard, Worklog, Skills, Reports, Artifacts, Billing, Admin
+# - All navigation links work
+# - Admin dashboard accessible (shows users, passkeys, jobs, audit tabs)
+```
+
+### ⚠️ Risks / Assumptions
+- Backend must be running on `http://localhost:8000` (as configured in `.env`)
+- All admin endpoints must be implemented in backend (as per OpenAPI schema)
+- User must have `is_staff` or `is_superuser` flag to access admin routes
+- Frontend assumes JWT-based authentication with refresh token in httpOnly cookie
+
+### 📝 Human TODOs
+- [ ] Verify all backend admin endpoints are working (users, passkeys, audit, failed jobs, system controls)
+- [ ] Test admin dashboard with real data
+- [ ] Add role-based hiding of admin menu item for non-admin users in the UI
+- [ ] Implement user detail modal/page when clicking "View" in admin user list
+- [ ] Add form validation to passkey creation modal
+- [ ] Style improvements and responsive testing on mobile devices
+- [ ] Add error notifications/toasts for failed API calls
+- [ ] Implement pagination for admin tables (users, passkeys, audit logs)
+- [ ] Add filtering/sorting capabilities to admin tables
+- [ ] Create integration tests for admin workflows
+
+---
+
 ## 2026-01-06 - Dokploy Stack Split + Caddy Frontend + Registry Auth
 
 ### Summary

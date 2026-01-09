@@ -30,7 +30,7 @@ router.beforeEach((to, from, next) => {
     })
   } else if (isPublicRoute && isAuthenticated && to.path.startsWith('/auth/login')) {
     // If already logged in and trying to access login, redirect to dashboard
-    next('/dashboard')
+    next('/afterresume/dashboard')
   } else {
     next()
   }
