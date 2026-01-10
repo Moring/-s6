@@ -11,8 +11,6 @@ services:
       - "host.docker.internal:host-gateway"
     expose:
       - "3000"
-    networks:
-      - afterresume-network
     restart: unless-stopped
     # labels:
     #   - "traefik.enable=true"
