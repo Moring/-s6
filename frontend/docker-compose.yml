@@ -1,32 +1,4 @@
-version: "3.9"
-
 services:
-  # traefik:
-  #   image: traefik:latest
-  #   command:
-  #     - "--api.insecure=true"
-  #     - "--providers.docker=true"
-  #     - "--providers.docker.exposedbydefault=false"
-  #     - "--entrypoints.web.address=:80"
-  #     - "--entrypoints.websecure.address=:443"
-  #     - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-  #     - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
-  #     - "--certificatesresolvers.le.acme.httpChallenge.entryPoint=web"
-  #     - "--certificatesresolvers.le.acme.email=david@appliedautonomics.com"
-  #     - "--certificatesresolvers.le.acme.storage=/acme.json"
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #     - "8080:8080"  # Traefik dashboard
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - ./traefik/acme.json:/acme.json
-  #   networks:
-  #     - afterresume-network
-  #   restart: unless-stopped
-  #   labels:
-  #     - "traefik.enable=true"
-
   frontend:
     build:
       context: .
@@ -52,6 +24,4 @@ services:
     # depends_on:
     #   - traefik
 
-networks:
-  afterresume-network:
-    external: false
+
