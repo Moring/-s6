@@ -3,11 +3,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --silent
 
-FROM node:18-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --silent
-
 FROM node:18-alpine AS build
 WORKDIR /app
 # Accept build-time Vite API URL and expose it to the build environment
