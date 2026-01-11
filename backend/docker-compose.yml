@@ -35,7 +35,7 @@ services:
     container_name: afterresume-backend-api
     command: python manage.py runserver 0.0.0.0:8000
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "10.6.0.5:${BACKEND_PORT:-8000}:8000"
     env_file:
       - ../.env
     environment:
@@ -119,7 +119,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-afterresume}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
     ports:
-      - "5432:5432"
+      - "10.6.0.5:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -134,7 +134,7 @@ services:
     image: valkey/valkey:latest
     container_name: afterresume-valkey
     ports:
-      - "6379:6379"
+      - "10.6.0.5:6379:6379"
     volumes:
       - valkey_data:/data
     networks:
@@ -153,8 +153,8 @@ services:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "10.6.0.5:9000:9000"
+      - "10.6.0.5:9001:9001"
     volumes:
       - minio_data:/data
     networks:

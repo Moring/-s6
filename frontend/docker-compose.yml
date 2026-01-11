@@ -1,25 +1,56 @@
+version: "3.9"
+
 services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesResolvers.le.acme.httpChallenge.entryPoint=web"
+      - "--certificatesResolvers.le.acme.email=david@appliedautonomics.com"
+      - "--certificatesResolvers.le.acme.storage=/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "10.6.0.3:8080:8080"  # Traefik dashboard bound to WireGuard IP
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/acme.json:/acme.json
+    networks:
+      - afterresume-network
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://10.6.0.5:8000}
+      # VITE_API_BASE_URL will be provided via .env at deployment; no default here
     env_file:
       - .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
     expose:
       - "3000"
+    networks:
+      - afterresume-network
     restart: unless-stopped
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.frontend.rule=Host(`agent.digimuse.com`)"
-    #   - "traefik.http.routers.frontend.entrypoints=websecure"
-    #   - "traefik.http.routers.frontend.tls=true"
-    #   - "traefik.http.routers.frontend.tls.certresolver=le"
-    #   - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-    # depends_on:
-    #   - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`agentic.digimuse.ai`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    depends_on:
+      - traefik
 
-
+networks:
+  afterresume-network:
+    external: false

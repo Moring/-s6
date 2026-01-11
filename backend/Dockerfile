@@ -5,7 +5,20 @@ WORKDIR /app
 # Copy requirements
 COPY pyproject.toml /app/
 
-# Install dependencies from pyproject.toml
+# Install system packages needed (tmux, neovim, psql)
+RUN apt-get update \
+	 && apt-get install -y --no-install-recommends \
+		 curl \
+		 unzip \
+		 tmux \
+		 sqlite3 \
+		 postgresql-client \
+		 jq \
+		 less \
+		 neovim \
+	 && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies from pyproject.toml
 RUN pip install --no-cache-dir -e .
 
 # Copy application

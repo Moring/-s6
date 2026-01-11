@@ -75,9 +75,9 @@ def main():
         raise
     
     # Get admin credentials from environment (for display later)
-    admin_user = os.environ.get('ADMIN_USERNAME', 'admin')
-    admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    admin_user = os.environ.get('ADMIN_USERNAME', 'davmor')
+    admin_email = os.environ.get('ADMIN_EMAIL', 'david@digimse.com')
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'sl15op33')
     
     # Create superuser and profile using management command
     print(f"\nBootstrapping admin user...")

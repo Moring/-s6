@@ -186,3 +186,28 @@ tasks:
     desc: Show all running containers
     cmds:
       - docker ps --filter "name=afterresume"
+
+  'deploy:registry':
+    desc: Deploy registry to WireGuard host and tail logs
+    cmds:
+      - rsync -az --info=progress2 ./docker-compose.registry.yml root@10.6.0.2:/root/docker-compose.registry.yml
+      - ssh root@10.6.0.2 "printf '%s\n' 'REGISTRY_USER=digimuse_registry' 'REGISTRY_PASSWORD=yeQc1seF7D4tQbspkz1vamjGSQLer8ZHkb77gnv' > /root/.env && chmod 600 /root/.env"
+      - ssh -t root@10.6.0.2 "cd /root && docker compose -f docker-compose.registry.yml --env-file .env up -d && docker compose -f docker-compose.registry.yml logs -f registry"
+
+  'deploy:frontend':
+    desc: Deploy frontend to WireGuard host and tail logs
+    cmds:
+      - rsync -az --delete --info=progress2 ./frontend/ root@10.6.0.3:/root/frontend/
+      - ssh root@10.6.0.3 "mkdir -p /root/frontend/traefik && [ -f /root/frontend/traefik/acme.json ] || printf '%s\n' '{}' > /root/frontend/traefik/acme.json && chmod 600 /root/frontend/traefik/acme.json"
+      - ssh root@10.6.0.3 "printf '%s\n' 'VITE_API_BASE_URL=http://turing.appliedautonomics.com:8000' > /root/frontend/.env && chmod 600 /root/frontend/.env"
+      - ssh root@10.6.0.3 "echo 'Checking connectivity to backend http://turing.appliedautonomics.com:8000' && curl -sS --max-time 5 http://turing.appliedautonomics.com:8000/v2/ || echo 'Backend not reachable from frontend host'"
+      - ssh -t root@10.6.0.3 "cd /root/frontend && docker compose -f docker-compose.yml --env-file .env up --build -d && docker compose -f docker-compose.yml logs -f frontend"
+
+  'deploy:backend':
+    desc: Deploy backend to WireGuard host and tail logs
+    cmds:
+      - ssh davmor@10.6.0.5 "mkdir -p /home/davmor/dm/s6/backend"
+      - rsync -az --delete --info=progress2 ./backend/ davmor@10.6.0.5:/home/davmor/dm/s6/backend/
+      - rsync -az --info=progress2 /home/davmor/dm/s6/.env davmor@10.6.0.5:/home/davmor/dm/s6/.env
+      - ssh davmor@10.6.0.5 "docker network inspect afterresume-net >/dev/null 2>&1 || docker network create afterresume-net"
+      - ssh -t davmor@10.6.0.5 "cd /home/davmor/dm/s6/backend && docker compose -f docker-compose.yml --env-file /home/davmor/dm/s6/.env up --build -d && docker compose -f docker-compose.yml logs -f backend-api"

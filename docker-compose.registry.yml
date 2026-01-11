@@ -1,6 +1,30 @@
 version: "3.9"
 
 services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.le.acme.httpChallenge.entryPoint=web"
+      - "--certificatesresolvers.le.acme.email=david@appliedautonomics.com"
+      - "--certificatesresolvers.le.acme.storage=/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/acme.json:/acme.json
+    networks:
+      - traefik
+    restart: unless-stopped
+
   registry-init:
     image: httpd:2
     entrypoint: ["/bin/sh","-c"]
@@ -22,25 +46,28 @@ services:
       - REGISTRY_AUTH=htpasswd
       - REGISTRY_AUTH_HTPASSWD_REALM=DigiMuse.ai Registry
       - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+      - VITE_API_BASE_URL=turing.appliedautonomics.com
     volumes:
       - registry-data:/var/lib/registry
       - ./registry/htpasswd:/auth/htpasswd:ro
+    ports:
+      - "10.6.0.2:5000:5000"
     depends_on:
       - registry-init
     deploy:
       placement:
         constraints:
           - node.labels.role == dokploy
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik"
-        - "traefik.http.routers.registry.rule=Host(`${REGISTRY_HOST}`)"
-        - "traefik.http.routers.registry.entrypoints=web"
-        - "traefik.http.routers.registry.middlewares=registry-auth"
-          # Avoid embedding hashed credentials here; prefer mounting the same htpasswd file
-          # into Traefik's dynamic config or use Traefik secrets so there's a single source of truth.
-          # Example: mount ./registry/htpasswd into Traefik and reference it from a file provider.
-        - "traefik.http.services.registry.loadbalancer.server.port=5000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.registry.rule=Host(`agent.digimuse.ai`)"
+      - "traefik.http.routers.registry.entrypoints=websecure"
+      - "traefik.http.routers.registry.tls=true"
+      - "traefik.http.routers.registry.tls.certresolver=le"
+      - "traefik.http.services.registry.loadbalancer.server.port=5000"
+    networks:
+      - traefik
 
 volumes:
   registry-data:
