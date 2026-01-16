@@ -33,8 +33,9 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'django_filters',
     'huey.contrib.djhuey',
-        'corsheaders',
+    'corsheaders',
     # Core apps
     'apps.tenants',
     'apps.accounts',

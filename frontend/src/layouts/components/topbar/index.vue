@@ -38,17 +38,16 @@
           <Icon icon="lucide:search"  class="app-search-icon text-muted" />
         </div>
 
-        <MegaMenu />
       </div>
 
       <div class="d-flex align-items-center gap-2">
-        <LanguageDropdown />
+        <!-- <LanguageDropdown /> -->
 
-        <MessageDropdown />
+        <!-- <MessageDropdown /> -->
 
         <NotificationDropdown />
 
-        <CustomizerToggler />
+        <!-- <CustomizerToggler /> -->
 
         <ThemeToggler />
 
@@ -59,11 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import MegaMenu from '@/layouts/components/topbar/components/MegaMenu.vue'
-import LanguageDropdown from '@/layouts/components/topbar/components/LanguageDropdown.vue'
-import MessageDropdown from '@/layouts/components/topbar/components/MessageDropdown.vue'
 import NotificationDropdown from '@/layouts/components/topbar/components/NotificationDropdown.vue'
-import CustomizerToggler from '@/layouts/components/topbar/components/CustomizerToggler.vue'
 import ThemeToggler from '@/layouts/components/topbar/components/ThemeToggler.vue'
 import UserProfile from '@/layouts/components/topbar/components/UserProfile.vue'
 import { useLayout } from '@/stores/layout.ts'

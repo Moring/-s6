@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.db import connection
 from apps.storage.minio import get_minio_client
+from django.conf import settings as django_settings
 
 
 @api_view(['GET'])
@@ -44,7 +45,48 @@ def readyz(request):
             checks['minio'] = f'error: {str(e)}'
     
     # Overall status
-    all_ok = all(v in ['ok', 'skipped'] for v in checks.values())
+    # Container statuses (via Docker) - optional
+    try:
+        # Lazy import so tests / environments without docker don't fail
+        import docker
+
+        docker_client = docker.from_env()
+        # Default list of container names to check (matches docker-compose container_name fields)
+        default_names = [
+            'afterresume-backend-init',
+            'afterresume-backend-api',
+            'afterresume-backend-worker',
+            'afterresume-postgres',
+            'afterresume-valkey',
+            'afterresume-minio',
+            'afterresume-minio-init',
+            'afterresume-ollama',
+            'afterresume-tika',
+            'afterresume-chroma',
+        ]
+        names = getattr(django_settings, 'DOCKER_CONTAINERS_TO_CHECK', default_names)
+        container_statuses = {}
+        for name in names:
+            try:
+                c = docker_client.containers.get(name)
+                # docker-py's Container.status gives 'running', 'exited', etc.
+                container_statuses[name] = c.status
+            except docker.errors.NotFound:
+                container_statuses[name] = 'not_found'
+            except Exception as e:
+                container_statuses[name] = f'error: {str(e)}'
+        checks['containers'] = container_statuses
+    except Exception as e:
+        # Docker not available or import failed
+        checks['containers'] = {'docker_client': f'unavailable: {str(e)}'}
+
+    def _is_ok(val):
+        if isinstance(val, dict):
+            # For container dict, consider 'running' or 'skipped' as ok
+            return all(v in ['running', 'skipped'] for v in val.values())
+        return val in ['ok', 'skipped']
+
+    all_ok = all(_is_ok(v) for v in checks.values())
     status_code = 200 if all_ok else 503
     
     return Response({

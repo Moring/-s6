@@ -3,13 +3,13 @@
     <!-- Brand Logo -->
     <RouterLink to="/" class="logo">
       <span class="logo logo-light">
-        <span class="logo-lg"><img :src="logo" alt="logo" /></span>
-        <span class="logo-sm"><img :src="logoSm" alt="small logo" /></span>
+        <span class="logo-lg">DigiMuse.ai</span>
+        <span class="logo-sm">DM</span>
       </span>
 
       <span class="logo logo-dark">
-        <span class="logo-lg"><img :src="logoDark" alt="dark logo" /></span>
-        <span class="logo-sm"><img :src="logoSm" alt="small logo" /></span>
+        <span class="logo-lg">DigiMuse.ai</span>
+        <span class="logo-sm">DM</span>
       </span>
     </RouterLink>
 
@@ -24,8 +24,6 @@
     </button>
 
     <simplebar id="sidenav" class="scrollbar" data-simplebar>
-      <UserProfile />
-
       <AppMenu />
     </simplebar>
   </div>

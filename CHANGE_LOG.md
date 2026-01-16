@@ -4,6 +4,213 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2026-01-16 - Worklog Client-Project Hierarchy & Organizational Context (Backend Phase 1)
+
+### Summary
+Implemented comprehensive worklog organizational hierarchy with Client → Project → Agile (Epic/Feature/Story/Task) structure, Sprint/Goal support, work type categorization, optional time tracking, tags/skills, draft support, and progressive enrichment architecture. All fields are optional to maintain fast "quick add" UX while supporting rich organizational context.
+
+### ✅ What Changed
+
+**Database Models** (`backend/apps/worklog/models.py`):
+- Added `Client` model: user-scoped clients/employers with unique names
+- Added `Project` model: client-scoped projects with unique names
+- Added `Epic`, `Feature`, `Story`, `Task` models: optional agile hierarchy under projects
+- Added `Sprint` model: project-scoped sprints with goals and date ranges
+- Extended `WorkLog` model with:
+  - Optional references to Client, Project, Agile hierarchy (Epic/Feature/Story/Task), Sprint
+  - `outcome` field for accomplishment descriptions
+  - `work_type` field (delivery/planning/incident/support/learning/other)
+  - `hours` field for optional time tracking
+  - `tags` JSONField for skills/technologies/keywords
+  - `enrichment_status` and `enrichment_suggestions` for progressive AI enhancement
+  - `is_draft` boolean for auto-save draft support
+- Added `description` field to `Attachment` model
+
+**API Serializers** (`backend/apps/worklog/serializers.py`):
+- Created serializers for all new models: `ClientSerializer`, `ProjectSerializer`, `EpicSerializer`, `FeatureSerializer`, `StorySerializer`, `TaskSerializer`, `SprintSerializer`
+- Updated `WorkLogSerializer` with all new fields and relationships
+- Created `WorkLogListSerializer` for lighter list views with computed fields
+
+**API Views** (`backend/apps/api/views/worklog.py`):
+- Added `WorkLogFilter` with filters for client, project, agile hierarchy, work_type, date range, search, is_draft
+- Updated `WorkLogListCreateView` and `WorkLogDetailView` to support new fields and filtering
+- Added CRUD views for Client, Project, and Sprint management
+- Implemented search/filter/ordering across all list views
+
+**API Endpoints** (`backend/apps/api/urls.py`):
+- `GET/POST /api/clients/` - List and create clients
+- `GET/PUT/PATCH/DELETE /api/clients/<id>/` - Client detail operations
+- `GET/POST /api/projects/` - List and create projects (filterable by client)
+- `GET/PUT/PATCH/DELETE /api/projects/<id>/` - Project detail operations
+- `GET/POST /api/sprints/` - List and create sprints (filterable by project)
+- `GET/PUT/PATCH/DELETE /api/sprints/<id>/` - Sprint detail operations
+- Enhanced `/api/worklogs/` with new filtering capabilities
+
+**Configuration**:
+- Added `django-filter` to `INSTALLED_APPS` in `backend/config/settings/base.py`
+- Installed `django-filter` package for advanced filtering support
+
+**Tests**:
+- Created `tests/test_worklog_hierarchy.py` with 9 model and relationship tests
+- Created `tests/test_worklog_api_hierarchy.py` with 14 API endpoint tests
+- All 23 new tests passing (100% coverage for new functionality)
+
+**Migrations**:
+- `worklog/migrations/0002_epic_attachment_description_and_more.py` - Adds all new models and fields
+
+### How to Verify
+
+**1. Check Database Schema**:
+```bash
+cd backend
+source ../.venv/bin/activate
+DATABASE_URL=postgresql://afterresume:afterresume@localhost:5432/afterresume python manage.py migrate
+```
+
+**2. Run Tests**:
+```bash
+DATABASE_URL=postgresql://afterresume:afterresume@localhost:5432/afterresume pytest tests/test_worklog_hierarchy.py -v
+DATABASE_URL=postgresql://afterresume:afterresume@localhost:5432/afterresume pytest tests/test_worklog_api_hierarchy.py -v
+```
+
+**3. Test API Endpoints**:
+```bash
+# Create a client
+curl -X POST http://localhost:8000/api/clients/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Acme Corp", "description": "Test client"}'
+
+# Create a project
+curl -X POST http://localhost:8000/api/projects/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"client": 1, "name": "Website Redesign", "description": "Redesign site"}'
+
+# Create a worklog entry with full context
+curl -X POST http://localhost:8000/api/worklogs/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2026-01-16",
+    "client": 1,
+    "project": 1,
+    "content": "Implemented user authentication",
+    "outcome": "Users can now log in securely",
+    "work_type": "delivery",
+    "hours": 4.5,
+    "tags": ["python", "django", "security"]
+  }'
+
+# Filter worklogs by client
+curl -X GET "http://localhost:8000/api/worklogs/?client=1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Search worklogs
+curl -X GET "http://localhost:8000/api/worklogs/?search=authentication" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Architecture Alignment
+✅ **Constraints Respected**:
+- No changes to top-level directory structure
+- No changes to service split (frontend/backend)
+- Backend models follow domain app layering
+- All organizational fields are optional (nullable/blank)
+- Progressive enrichment architecture (enrichment_status, enrichment_suggestions)
+- Multi-tenancy ready (user-scoped clients)
+- Test coverage for all new functionality
+
+### Design Decisions
+
+**1. Progressive Enrichment Architecture**:
+- WorkLog creation remains minimal (date + content only)
+- All organizational context (client, project, agile, sprint, etc.) is optional
+- Supports "quick add in <60 seconds" UX requirement
+- `enrichment_status` and `enrichment_suggestions` fields enable future DAG-driven enhancement
+- Draft support (`is_draft`) enables auto-save without cluttering main list
+
+**2. Organizational Hierarchy**:
+- Client (employer/customer) is top-level, user-scoped
+- Project belongs to Client
+- Agile hierarchy (Epic→Feature→Story→Task) is optional and project-scoped
+- Sprint/Goal is optional and project-scoped
+- WorkLog can reference any level directly (flexible, not strict hierarchy enforcement)
+
+**3. Data Model Philosophy**:
+- "Nullable by default" for organizational fields
+- WorkLog can stand alone without any hierarchy
+- WorkLog can reference Client without Project
+- WorkLog can reference Task without referencing Story/Feature/Epic (flexible)
+- Tags are JSONField (list of strings) for easy skill extraction
+
+### Known Limitations & Next Steps
+
+**Current Implementation** (Phase 1 - Backend):
+- ✅ Database models and migrations
+- ✅ API endpoints and serializers
+- ✅ Filtering, search, ordering
+- ✅ Comprehensive test coverage
+- ❌ Frontend Vue3 components (Phase 2)
+- ❌ DAG workflows for enrichment (Phase 3)
+- ❌ Report generation with organizational context (Phase 4)
+- ❌ Skills extraction from tags (Phase 5)
+
+**Future Enhancements** (Later Phases):
+- Entry enhancement DAG (suggest impact, metrics, scope, stakeholders)
+- Review queue DAG (flag low-quality entries)
+- Smart defaults (remember last client/project per user)
+- Time inference between entries (optional)
+- Report generation by client/project/date range
+- Skills library auto-population from tags
+- Gamification triggers for consistent logging
+
+### Risks & Assumptions
+
+**Assumptions**:
+- Users will adopt organizational hierarchy gradually (not required upfront)
+- Tags field as JSONField is acceptable (vs. separate Tag model with M2M)
+- Agile hierarchy depth (Epic→Feature→Story→Task) is sufficient
+- Work type enum covers common categories (extensible via metadata if needed)
+
+**Risks**:
+- None identified (all changes are additive, backward compatible)
+
+### Human TODOs
+
+**Required for Full Feature**:
+- [ ] Implement Vue3 frontend components for:
+  - Client management (list, create, edit)
+  - Project management (list, create, edit, filter by client)
+  - Sprint management (list, create, edit, filter by project)
+  - Worklog quick-add form with smart defaults
+  - Worklog list with filters (client, project, work_type, date range, search)
+  - Worklog detail/edit with full organizational context
+  - Draft auto-save functionality
+- [ ] Implement DAG workflows for:
+  - Entry enrichment (suggest missing fields)
+  - Review queue (flag low-quality entries)
+  - Skills extraction from tags
+  - Report generation with organizational breakdown
+- [ ] Update frontend routing to match new endpoints
+- [ ] Add user settings for "last used client/project" defaults
+- [ ] Document user workflow in ADMIN_GUIDE.md
+
+**Optional Enhancements**:
+- [ ] Time inference DAG (calculate gaps between entries)
+- [ ] Agile hierarchy management UI (Epics/Features/Stories/Tasks)
+- [ ] Sprint planning/tracking UI
+- [ ] Worklog import from external sources (email, Slack, etc.)
+- [ ] Bulk operations (assign multiple entries to project, etc.)
+
+### Deployment Notes
+- Migration `worklog.0002_*` must be applied before backend restart
+- No environment variable changes required
+- Backward compatible: existing WorkLog entries remain valid (new fields are nullable)
+- No data migration needed (all new fields have defaults)
+
+---
+
 ## 2026-01-09 - Frontend Vue3 DigiMuse.AI Branding, Docker/Traefik Setup, AI Chat Integration
 
 ### Summary

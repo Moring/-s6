@@ -58,6 +58,18 @@ urlpatterns = [
     path('worklogs/<int:pk>/', worklog.WorkLogDetailView.as_view(), name='worklog-detail'),
     path('worklogs/<int:pk>/analyze/', worklog.analyze_worklog, name='worklog-analyze'),
     
+    # Clients
+    path('clients/', worklog.ClientListCreateView.as_view(), name='client-list'),
+    path('clients/<int:pk>/', worklog.ClientDetailView.as_view(), name='client-detail'),
+    
+    # Projects
+    path('projects/', worklog.ProjectListCreateView.as_view(), name='project-list'),
+    path('projects/<int:pk>/', worklog.ProjectDetailView.as_view(), name='project-detail'),
+    
+    # Sprints
+    path('sprints/', worklog.SprintListCreateView.as_view(), name='sprint-list'),
+    path('sprints/<int:pk>/', worklog.SprintDetailView.as_view(), name='sprint-detail'),
+    
     # Worklog Attachments
     path('worklogs/<int:worklog_id>/attachments/', attachments.upload_attachment, name='attachment-upload'),
     path('worklogs/<int:worklog_id>/attachments/<int:attachment_id>/', attachments.delete_attachment, name='attachment-delete'),

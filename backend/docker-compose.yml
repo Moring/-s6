@@ -1,26 +1,30 @@
+version: "3.9"
+
 services:
+  # -----------------------------
+  # Django bootstrap / migrations
+  # -----------------------------
   backend-init:
     build: .
     container_name: afterresume-backend-init
-    command: python scripts/bootstrap.py
+    command: >
+      sh -c "
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      python manage.py createsuperuser --noinput || true
+      "
     env_file:
       - ../.env
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
-      - POSTGRES_DB=${POSTGRES_DB:-afterresume}
-      - POSTGRES_USER=${POSTGRES_USER:-afterresume}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
-      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
-      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin123}
+      # Default to production settings; override with env when developing locally
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
+      # Safety: default DEBUG=0 in case env not provided
+      DEBUG: ${DEBUG:-0}
+      # SECURITY: Provide `SECRET_KEY` via the env_file (do not set an insecure default)
+      DATABASE_URL: postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin123}
     volumes:
       - .:/app
     depends_on:
@@ -30,33 +34,48 @@ services:
       - afterresume-net
     restart: "no"
 
+  # -----------------------------
+  # Django API
+  # -----------------------------
   backend-api:
     build: .
     container_name: afterresume-backend-api
     command: python manage.py runserver 0.0.0.0:8000
-    ports:
-      - "10.6.0.5:${BACKEND_PORT:-8000}:8000"
+    # Do not bind the development server to the host when running behind Traefik.
+    # Traefik will route requests over the Docker network directly to this container.
+    # If you need the host binding for local dev, run `docker compose` without Traefik
+    # or add the port mapping back temporarily.
     env_file:
       - ../.env
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key}
-      - DJANGO_ALLOWED_HOSTS=*,localhost,127.0.0.1
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
-      - POSTGRES_DB=${POSTGRES_DB:-afterresume}
-      - POSTGRES_USER=${POSTGRES_USER:-afterresume}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - REDIS_URL=redis://valkey:6379/0
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=False
-      - MINIO_BUCKET=${MINIO_BUCKET:-artifacts}
-      - LLM_PROVIDER=${LLM_PROVIDER:-local}
-      - SYSTEM_DASHBOARD_ENABLED=${SYSTEM_DASHBOARD_ENABLED:-True}
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
+      DEBUG: ${DEBUG:-0}
+      DJANGO_ALLOWED_HOSTS: "*,localhost,127.0.0.1"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
+
+      REDIS_URL: redis://valkey:6379/0
+
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_SECURE: "False"
+      MINIO_BUCKET: ${MINIO_BUCKET:-artifacts}
+
+      OLLAMA_BASE_URL: http://ollama:11434
+      TIKA_URL: http://tika:9998
+
+      VECTOR_DB: chroma
+      CHROMA_URL: http://chroma:8000
+
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: nomic-embed-text
+      EMBEDDING_DIM: 768
+      CHUNK_SIZE: 800
+      CHUNK_OVERLAP: 100
+
+      SYSTEM_DASHBOARD_ENABLED: "True"
+    ports:
+      - "8000:8000"
     volumes:
       - .:/app
       - backend_static:/app/staticfiles
@@ -69,6 +88,12 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      ollama:
+        condition: service_healthy
+      tika:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
     networks:
       - afterresume-net
     healthcheck:
@@ -78,6 +103,9 @@ services:
       retries: 5
       start_period: 30s
 
+  # -----------------------------
+  # Huey worker
+  # -----------------------------
   backend-worker:
     build: .
     container_name: afterresume-backend-worker
@@ -85,22 +113,28 @@ services:
     env_file:
       - ../.env
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.dev
-      - DEBUG=${DEBUG:-1}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
-      - POSTGRES_DB=${POSTGRES_DB:-afterresume}
-      - POSTGRES_USER=${POSTGRES_USER:-afterresume}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - REDIS_URL=redis://valkey:6379/0
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_SECURE=False
-      - MINIO_BUCKET=${MINIO_BUCKET:-artifacts}
-      - LLM_PROVIDER=${LLM_PROVIDER:-local}
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.prod}
+      DEBUG: ${DEBUG:-0}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-afterresume}:${POSTGRES_PASSWORD:-afterresume}@postgres:5432/${POSTGRES_DB:-afterresume}
+
+      REDIS_URL: redis://valkey:6379/0
+
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+
+      OLLAMA_BASE_URL: http://ollama:11434
+      TIKA_URL: http://tika:9998
+
+      VECTOR_DB: chroma
+      CHROMA_URL: http://chroma:8010
+
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: nomic-embed-text
+
+      HUEY_IMMEDIATE: "false"
+      HUEY_WORKER_COUNT: 2
+
     volumes:
       - .:/app
     depends_on:
@@ -110,16 +144,20 @@ services:
         condition: service_healthy
     networks:
       - afterresume-net
+    stop_grace_period: 30s
 
+  # -----------------------------
+  # Postgres
+  # -----------------------------
   postgres:
     image: postgres:16-alpine
     container_name: afterresume-postgres
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-afterresume}
-      - POSTGRES_USER=${POSTGRES_USER:-afterresume}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afterresume}
+      POSTGRES_DB: ${POSTGRES_DB:-afterresume}
+      POSTGRES_USER: ${POSTGRES_USER:-afterresume}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-afterresume}
     ports:
-      - "10.6.0.5:5432:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -130,11 +168,14 @@ services:
       timeout: 3s
       retries: 5
 
+  # -----------------------------
+  # Valkey (Redis-compatible)
+  # -----------------------------
   valkey:
     image: valkey/valkey:latest
     container_name: afterresume-valkey
     ports:
-      - "10.6.0.5:6379:6379"
+      - "6379:6379"
     volumes:
       - valkey_data:/data
     networks:
@@ -145,16 +186,19 @@ services:
       timeout: 3s
       retries: 5
 
+  # -----------------------------
+  # MinIO
+  # -----------------------------
   minio:
     image: minio/minio:latest
     container_name: afterresume-minio
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "10.6.0.5:9000:9000"
-      - "10.6.0.5:9001:9001"
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio_data:/data
     networks:
@@ -165,12 +209,95 @@ services:
       timeout: 5s
       retries: 5
 
+  minio-init:
+    image: minio/mc
+    container_name: afterresume-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+      mc alias set local http://minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD &&
+      mc mb -p local/artifacts || true
+      "
+    networks:
+      - afterresume-net
+    restart: "no"
+
+  # -----------------------------
+  # Ollama (LLM runtime)
+  # -----------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: afterresume-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - afterresume-net
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------
+  # Apache Tika
+  # -----------------------------
+  tika:
+    image: apache/tika:latest-full
+    container_name: afterresume-tika
+    ports:
+      - "9998:9998"
+    networks:
+      - afterresume-net
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------
+  # Chroma Vector DB
+  # -----------------------------
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: afterresume-chroma
+    user: "0:0"
+    ports:
+      - "8010:8000"
+    volumes:
+      - chroma_data:/data
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /data
+      ANONYMIZED_TELEMETRY: "FALSE"
+    networks:
+      - afterresume-net
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+
+
+# -----------------------------
+# Volumes
+# -----------------------------
 volumes:
   backend_static:
   postgres_data:
   valkey_data:
   minio_data:
+  ollama_data:
+  chroma_data:
 
+# -----------------------------
+# Network
+# -----------------------------
 networks:
   afterresume-net:
     external: true

@@ -84,16 +84,6 @@ tasks:
 
   # === Shell Access ===
   
-  shell-backend:
-    desc: Open Django shell (backend)
-    cmds:
-      - docker compose -f backend/docker-compose.yml exec backend-api python manage.py shell
-
-  shell-frontend:
-    desc: Open Django shell (frontend)
-    cmds:
-      - docker compose -f frontend/docker-compose.yml exec frontend python manage.py shell
-
   bash-backend:
     desc: Open bash in backend container
     cmds:
@@ -142,6 +132,16 @@ tasks:
       - task: migrate
       - task: seed
       - 'echo "Bootstrap complete! Frontend: http://localhost:3000"'
+
+  'dev:up':
+    desc: Start backend in dev config and run frontend dev server locally
+    cmds:
+      - task: network
+      - DJANGO_SETTINGS_MODULE=config.settings.dev DEBUG=1 docker compose -f backend/docker-compose.yml --env-file .env up -d
+      - task: wait-for-backend
+      - cd frontend && npm ci --no-audit --no-fund || true
+      - cd frontend && npm run dev
+      - 'echo "Development environment is up! Frontend: http://localhost:3000"'
 
   # === Testing ===
   
@@ -201,13 +201,13 @@ tasks:
       - ssh root@10.6.0.3 "mkdir -p /root/frontend/traefik && [ -f /root/frontend/traefik/acme.json ] || printf '%s\n' '{}' > /root/frontend/traefik/acme.json && chmod 600 /root/frontend/traefik/acme.json"
       - ssh root@10.6.0.3 "printf '%s\n' 'VITE_API_BASE_URL=http://turing.appliedautonomics.com:8000' > /root/frontend/.env && chmod 600 /root/frontend/.env"
       - ssh root@10.6.0.3 "echo 'Checking connectivity to backend http://turing.appliedautonomics.com:8000' && curl -sS --max-time 5 http://turing.appliedautonomics.com:8000/v2/ || echo 'Backend not reachable from frontend host'"
-      - ssh -t root@10.6.0.3 "cd /root/frontend && docker compose -f docker-compose.yml --env-file .env up --build -d && docker compose -f docker-compose.yml logs -f frontend"
+      - ssh -t root@10.6.0.3 "cd /root/frontend && docker compose -f docker-compose.yml --env-file .env --profile traefik up --build -d && docker compose -f docker-compose.yml logs -f frontend"
 
   'deploy:backend':
     desc: Deploy backend to WireGuard host and tail logs
     cmds:
       - ssh davmor@10.6.0.5 "mkdir -p /home/davmor/dm/s6/backend"
-      - rsync -az --delete --info=progress2 ./backend/ davmor@10.6.0.5:/home/davmor/dm/s6/backend/
+      - rsync -az --exclude staticfiles/ --delete --info=progress2 ./backend/ davmor@10.6.0.5:/home/davmor/dm/s6/backend/
       - rsync -az --info=progress2 /home/davmor/dm/s6/.env davmor@10.6.0.5:/home/davmor/dm/s6/.env
       - ssh davmor@10.6.0.5 "docker network inspect afterresume-net >/dev/null 2>&1 || docker network create afterresume-net"
-      - ssh -t davmor@10.6.0.5 "cd /home/davmor/dm/s6/backend && docker compose -f docker-compose.yml --env-file /home/davmor/dm/s6/.env up --build -d && docker compose -f docker-compose.yml logs -f backend-api"
+      - ssh -t davmor@10.6.0.5 "cd /home/davmor/dm/s6/backend && DJANGO_SETTINGS_MODULE=config.settings.prod docker compose -f docker-compose.yml --env-file /home/davmor/dm/s6/.env up --build -d && docker compose -f docker-compose.yml logs -f backend-api"
