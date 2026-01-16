@@ -4,18 +4,49 @@ export interface WorkLog {
   id?: number
   user?: number
   date: string
+  
+  // Organizational hierarchy (all optional)
+  client?: number | null
+  client_name?: string | null
+  project?: number | null
+  project_name?: string | null
+  epic?: number | null
+  feature?: number | null
+  story?: number | null
+  task?: number | null
+  sprint?: number | null
+  
+  // Core content
   content: string
+  outcome?: string
+  work_type?: 'delivery' | 'planning' | 'incident' | 'support' | 'learning' | 'other'
+  
+  // Time tracking (optional)
+  hours?: number | null
+  
+  // Tags and skills
+  tags?: string[]
+  
+  // Source and enrichment
   source?: string
   metadata?: any
+  enrichment_status?: string
+  enrichment_suggestions?: any
+  
+  // Draft support
+  is_draft?: boolean
+  
   created_at?: string
   updated_at?: string
   attachments?: Attachment[]
+  attachment_count?: number
 }
 
 export interface Attachment {
   id: number
   kind: string
   filename: string
+  description?: string
   size_bytes: number
   created_at: string
 }
@@ -29,10 +60,20 @@ export interface WorkLogListResponse {
 
 export interface WorkLogFilter {
   page?: number
+  limit?: number
   search?: string
-  date_from?: string
-  date_to?: string
-  source?: string
+  start_date?: string
+  end_date?: string
+  client?: number
+  project?: number
+  epic?: number
+  feature?: number
+  story?: number
+  task?: number
+  sprint?: number
+  work_type?: string
+  is_draft?: boolean
+  ordering?: string
 }
 
 class WorkLogService {
