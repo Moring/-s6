@@ -27,6 +27,18 @@ export const allRoutes = [
                 meta: { title: 'Worklog', requiresAuth: true },
             },
             {
+                path: 'worklog/clients',
+                name: 'worklog-clients',
+                component: () => import('@/views/afterresume/worklog/ClientsView.vue'),
+                meta: { title: 'Clients & Employers', requiresAuth: true },
+            },
+            {
+                path: 'worklog/projects',
+                name: 'worklog-projects',
+                component: () => import('@/views/afterresume/worklog/ProjectsView.vue'),
+                meta: { title: 'Projects', requiresAuth: true },
+            },
+            {
                 path: 'skills',
                 name: 'afterresume-skills',
                 component: () => import('@/views/afterresume/skills/index.vue'),

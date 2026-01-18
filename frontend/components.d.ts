@@ -32,6 +32,8 @@ declare module 'vue' {
     BFormText: typeof import('bootstrap-vue-next/components/BForm')['BFormText']
     BFormTextarea: typeof import('bootstrap-vue-next/components/BFormTextarea')['BFormTextarea']
     BInputGroup: typeof import('bootstrap-vue-next/components/BInputGroup')['BInputGroup']
+    BListGroup: typeof import('bootstrap-vue-next/components/BListGroup')['BListGroup']
+    BListGroupItem: typeof import('bootstrap-vue-next/components/BListGroup')['BListGroupItem']
     BModal: typeof import('bootstrap-vue-next/components/BModal')['BModal']
     BOffcanvas: typeof import('bootstrap-vue-next/components/BOffcanvas')['BOffcanvas']
     BPagination: typeof import('bootstrap-vue-next/components/BPagination')['BPagination']
@@ -39,6 +41,7 @@ declare module 'vue' {
     BRow: typeof import('bootstrap-vue-next/components/BContainer')['BRow']
     BSpinner: typeof import('bootstrap-vue-next/components/BSpinner')['BSpinner']
     BTab: typeof import('bootstrap-vue-next/components/BTabs')['BTab']
+    BTable: typeof import('bootstrap-vue-next/components/BTable')['BTable']
     BTabs: typeof import('bootstrap-vue-next/components/BTabs')['BTabs']
     ChoicesInput: typeof import('./src/components/ChoicesInput.vue')['default']
     ChoicesSelect: typeof import('./src/components/ChoicesSelect.vue')['default']
@@ -59,5 +62,10 @@ declare module 'vue' {
     TextDifferentView: typeof import('./src/components/TextDifferentView.vue')['default']
     TouchSpinInput: typeof import('./src/components/TouchSpinInput.vue')['default']
     UICard: typeof import('./src/components/UICard.vue')['default']
+    WorklogFormModal: typeof import('./src/components/worklog/WorklogFormModal.vue')['default']
+    WorklogViewModal: typeof import('./src/components/worklog/WorklogViewModal.vue')['default']
+  }
+  export interface GlobalDirectives {
+    vBToggle: typeof import('bootstrap-vue-next/directives/BToggle')['vBToggle']
   }
 }

@@ -168,9 +168,9 @@
                 >
                   <div class="d-flex align-items-start">
                     <div class="flex-grow-1">
-                      <h6 class="mb-1">{{ formatDate(entry.date) }}</h6>
+                      <h6 class="mb-1">{{ formatDate(entry.occurred_on) }}</h6>
                       <p class="mb-1 text-truncate">{{ entry.content }}</p>
-                      <small class="text-muted">{{ formatTimeAgo(entry.created_at) }}</small>
+                      <small class="text-muted">{{ formatTimeAgo(entry.created_at || '') }}</small>
                     </div>
                     <BButton
                       size="sm"
