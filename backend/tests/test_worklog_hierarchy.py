@@ -74,13 +74,13 @@ class TestClientProjectHierarchy:
         """Test creating a worklog entry with client and project."""
         worklog = WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project,
             content='Implemented user login feature',
             outcome='Users can now log in securely',
             work_type='delivery',
-            hours=4.5,
+            effort_minutes=270,
             tags=['python', 'django', 'authentication']
         )
         assert worklog.client == client_obj
@@ -93,7 +93,7 @@ class TestClientProjectHierarchy:
         """Test creating a minimal worklog entry without hierarchy."""
         worklog = WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Fixed a bug in the API'
         )
         assert worklog.client is None
@@ -118,14 +118,14 @@ class TestClientProjectHierarchy:
         """Test querying worklogs by client."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project,
             content='Work on project 1'
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Personal work'
         )
         
@@ -137,7 +137,7 @@ class TestClientProjectHierarchy:
         """Test querying worklogs by project."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project,
             content='Work on feature A'
@@ -150,7 +150,7 @@ class TestClientProjectHierarchy:
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project2,
             content='Work on feature B'
@@ -164,12 +164,12 @@ class TestClientProjectHierarchy:
         """Test creating a draft worklog entry."""
         draft = WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Work in progress',
-            is_draft=True
+            status="draft"
         )
         assert draft.is_draft
         
         # Query only published worklogs
-        published = WorkLog.objects.filter(is_draft=False)
+        published = WorkLog.objects.filter(status="ready")
         assert draft not in published

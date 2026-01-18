@@ -58,6 +58,14 @@ urlpatterns = [
     path('worklogs/<int:pk>/', worklog.WorkLogDetailView.as_view(), name='worklog-detail'),
     path('worklogs/<int:pk>/analyze/', worklog.analyze_worklog, name='worklog-analyze'),
     
+    # Worklog enrichment (skill signals, bullets, external links)
+    path('worklogs/<int:worklog_id>/skill-signals/', worklog.WorkLogSkillSignalListView.as_view(), name='worklog-skill-signals'),
+    path('worklogs/<int:worklog_id>/skill-signals/<int:pk>/', worklog.WorkLogSkillSignalDetailView.as_view(), name='worklog-skill-signal-detail'),
+    path('worklogs/<int:worklog_id>/bullets/', worklog.WorkLogBulletListView.as_view(), name='worklog-bullets'),
+    path('worklogs/<int:worklog_id>/bullets/<int:pk>/', worklog.WorkLogBulletDetailView.as_view(), name='worklog-bullet-detail'),
+    path('worklogs/<int:worklog_id>/external-links/', worklog.WorkLogExternalLinkListView.as_view(), name='worklog-external-links'),
+    path('worklogs/<int:worklog_id>/external-links/<int:pk>/', worklog.WorkLogExternalLinkDetailView.as_view(), name='worklog-external-link-detail'),
+    
     # Clients
     path('clients/', worklog.ClientListCreateView.as_view(), name='client-list'),
     path('clients/<int:pk>/', worklog.ClientDetailView.as_view(), name='client-detail'),
@@ -66,9 +74,27 @@ urlpatterns = [
     path('projects/', worklog.ProjectListCreateView.as_view(), name='project-list'),
     path('projects/<int:pk>/', worklog.ProjectDetailView.as_view(), name='project-detail'),
     
+    # Agile hierarchy
+    path('epics/', worklog.EpicListCreateView.as_view(), name='epic-list'),
+    path('epics/<int:pk>/', worklog.EpicDetailView.as_view(), name='epic-detail'),
+    path('features/', worklog.FeatureListCreateView.as_view(), name='feature-list'),
+    path('features/<int:pk>/', worklog.FeatureDetailView.as_view(), name='feature-detail'),
+    path('stories/', worklog.StoryListCreateView.as_view(), name='story-list'),
+    path('stories/<int:pk>/', worklog.StoryDetailView.as_view(), name='story-detail'),
+    path('tasks/', worklog.TaskListCreateView.as_view(), name='task-list'),
+    path('tasks/<int:pk>/', worklog.TaskDetailView.as_view(), name='task-detail'),
+    
     # Sprints
     path('sprints/', worklog.SprintListCreateView.as_view(), name='sprint-list'),
     path('sprints/<int:pk>/', worklog.SprintDetailView.as_view(), name='sprint-detail'),
+    
+    # Worklog Presets
+    path('worklog-presets/', worklog.WorkLogPresetListCreateView.as_view(), name='worklog-preset-list'),
+    path('worklog-presets/<int:pk>/', worklog.WorkLogPresetDetailView.as_view(), name='worklog-preset-detail'),
+    
+    # Worklog Reports
+    path('worklog-reports/', worklog.WorkLogReportListView.as_view(), name='worklog-report-list'),
+    path('worklog-reports/<int:pk>/', worklog.WorkLogReportDetailView.as_view(), name='worklog-report-detail'),
     
     # Worklog Attachments
     path('worklogs/<int:worklog_id>/attachments/', attachments.upload_attachment, name='attachment-upload'),

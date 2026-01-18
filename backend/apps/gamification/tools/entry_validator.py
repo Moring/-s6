@@ -56,7 +56,7 @@ def is_meaningful_entry(entry, config: Dict) -> Tuple[bool, Dict]:
     duplicate_cutoff = timezone.now() - timedelta(seconds=duplicate_threshold_seconds)
     duplicate_count = WorkLog.objects.filter(
         user=entry.user,
-        date=entry.date,
+        occurred_on=entry.occurred_on,
         created_at__gte=duplicate_cutoff
     ).exclude(id=entry.id).count()
     

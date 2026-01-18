@@ -131,14 +131,14 @@ class TestWorklogAPIHierarchy:
         # Create worklogs for different clients
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project,
             content='Work for client 1'
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Personal work'
         )
         
@@ -151,7 +151,7 @@ class TestWorklogAPIHierarchy:
         """Test filtering worklogs by project."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project,
             content='Work on project 1'
@@ -160,7 +160,7 @@ class TestWorklogAPIHierarchy:
         project2 = Project.objects.create(client=client_obj, name='Project 2')
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             client=client_obj,
             project=project2,
             content='Work on project 2'
@@ -175,13 +175,13 @@ class TestWorklogAPIHierarchy:
         """Test filtering worklogs by work type."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Implemented feature',
             work_type='delivery'
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Fixed production issue',
             work_type='incident'
         )
@@ -198,10 +198,10 @@ class TestWorklogAPIHierarchy:
         today = date.today()
         yesterday = today - timedelta(days=1)
         
-        WorkLog.objects.create(user=user, date=yesterday, content='Yesterday work')
-        WorkLog.objects.create(user=user, date=today, content='Today work')
+        WorkLog.objects.create(user=user, occurred_on=yesterday, content='Yesterday work')
+        WorkLog.objects.create(user=user, occurred_on=today, content='Today work')
         
-        response = api_client.get(f'/api/worklogs/?start_date={today}')
+        response = api_client.get(f'/api/worklogs/?start_occurred_on={today}')
         assert response.status_code == 200
         assert len(response.data['results']) == 1
         assert response.data['results'][0]['content'] == 'Today work'
@@ -210,12 +210,12 @@ class TestWorklogAPIHierarchy:
         """Test searching worklogs by content."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Implemented authentication feature'
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Fixed database bug'
         )
         
@@ -229,27 +229,27 @@ class TestWorklogAPIHierarchy:
         response = api_client.post('/api/worklogs/', {
             'date': str(date.today()),
             'content': 'Work in progress',
-            'is_draft': True
+            'status': True
         })
         assert response.status_code == 201
-        assert response.data['is_draft'] is True
+        assert response.data['status'] is True
     
     def test_filter_draft_worklogs(self, api_client, user):
         """Test filtering draft worklogs."""
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Published work',
-            is_draft=False
+            status="ready"
         )
         WorkLog.objects.create(
             user=user,
-            date=date.today(),
+            occurred_on=date.today(),
             content='Draft work',
-            is_draft=True
+            status="draft"
         )
         
-        response = api_client.get('/api/worklogs/?is_draft=true')
+        response = api_client.get('/api/worklogs/?status=true')
         assert response.status_code == 200
         assert len(response.data['results']) == 1
         assert response.data['results'][0]['content'] == 'Draft work'
