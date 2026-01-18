@@ -39,6 +39,12 @@ export const allRoutes = [
                 meta: { title: 'Projects', requiresAuth: true },
             },
             {
+                path: 'worklog/debug',
+                name: 'worklog-debug',
+                component: () => import('@/views/afterresume/worklog/debug.vue'),
+                meta: { title: 'Worklog Debug', requiresAuth: true },
+            },
+            {
                 path: 'skills',
                 name: 'afterresume-skills',
                 component: () => import('@/views/afterresume/skills/index.vue'),

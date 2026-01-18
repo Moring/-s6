@@ -278,7 +278,7 @@ class WorkLogService {
   
   async listClients(): Promise<Client[]> {
     try {
-      const response = await apiClient.get<Client[]>('/api/worklogs/clients/')
+      const response = await apiClient.get<Client[]>('/api/clients/')
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -287,7 +287,7 @@ class WorkLogService {
 
   async getClient(id: number): Promise<Client> {
     try {
-      const response = await apiClient.get<Client>(`/api/worklogs/clients/${id}/`)
+      const response = await apiClient.get<Client>(`/api/clients/${id}/`)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -296,7 +296,7 @@ class WorkLogService {
 
   async createClient(data: Partial<Client>): Promise<Client> {
     try {
-      const response = await apiClient.post<Client>('/api/worklogs/clients/', data)
+      const response = await apiClient.post<Client>('/api/clients/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -305,7 +305,7 @@ class WorkLogService {
 
   async updateClient(id: number, data: Partial<Client>): Promise<Client> {
     try {
-      const response = await apiClient.patch<Client>(`/api/worklogs/clients/${id}/`, data)
+      const response = await apiClient.patch<Client>(`/api/clients/${id}/`, data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -314,7 +314,7 @@ class WorkLogService {
 
   async deleteClient(id: number): Promise<void> {
     try {
-      await apiClient.delete(`/api/worklogs/clients/${id}/`)
+      await apiClient.delete(`/api/clients/${id}/`)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
@@ -325,7 +325,7 @@ class WorkLogService {
   async listProjects(clientId?: number): Promise<Project[]> {
     try {
       const params = clientId ? { client: clientId } : {}
-      const response = await apiClient.get<Project[]>('/api/worklogs/projects/', { params })
+      const response = await apiClient.get<Project[]>('/api/projects/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -334,7 +334,7 @@ class WorkLogService {
 
   async getProject(id: number): Promise<Project> {
     try {
-      const response = await apiClient.get<Project>(`/api/worklogs/projects/${id}/`)
+      const response = await apiClient.get<Project>(`/api/projects/${id}/`)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -343,7 +343,7 @@ class WorkLogService {
 
   async createProject(data: Partial<Project>): Promise<Project> {
     try {
-      const response = await apiClient.post<Project>('/api/worklogs/projects/', data)
+      const response = await apiClient.post<Project>('/api/projects/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -352,7 +352,7 @@ class WorkLogService {
 
   async updateProject(id: number, data: Partial<Project>): Promise<Project> {
     try {
-      const response = await apiClient.patch<Project>(`/api/worklogs/projects/${id}/`, data)
+      const response = await apiClient.patch<Project>(`/api/projects/${id}/`, data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -361,7 +361,7 @@ class WorkLogService {
 
   async deleteProject(id: number): Promise<void> {
     try {
-      await apiClient.delete(`/api/worklogs/projects/${id}/`)
+      await apiClient.delete(`/api/projects/${id}/`)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
@@ -372,7 +372,7 @@ class WorkLogService {
   async listEpics(projectId?: number): Promise<Epic[]> {
     try {
       const params = projectId ? { project: projectId } : {}
-      const response = await apiClient.get<Epic[]>('/api/worklogs/epics/', { params })
+      const response = await apiClient.get<Epic[]>('/api/epics/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -381,7 +381,7 @@ class WorkLogService {
 
   async createEpic(data: Partial<Epic>): Promise<Epic> {
     try {
-      const response = await apiClient.post<Epic>('/api/worklogs/epics/', data)
+      const response = await apiClient.post<Epic>('/api/epics/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -393,7 +393,7 @@ class WorkLogService {
   async listFeatures(epicId?: number): Promise<Feature[]> {
     try {
       const params = epicId ? { epic: epicId } : {}
-      const response = await apiClient.get<Feature[]>('/api/worklogs/features/', { params })
+      const response = await apiClient.get<Feature[]>('/api/features/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -402,7 +402,7 @@ class WorkLogService {
 
   async createFeature(data: Partial<Feature>): Promise<Feature> {
     try {
-      const response = await apiClient.post<Feature>('/api/worklogs/features/', data)
+      const response = await apiClient.post<Feature>('/api/features/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -414,7 +414,7 @@ class WorkLogService {
   async listStories(featureId?: number): Promise<Story[]> {
     try {
       const params = featureId ? { feature: featureId } : {}
-      const response = await apiClient.get<Story[]>('/api/worklogs/stories/', { params })
+      const response = await apiClient.get<Story[]>('/api/stories/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -423,7 +423,7 @@ class WorkLogService {
 
   async createStory(data: Partial<Story>): Promise<Story> {
     try {
-      const response = await apiClient.post<Story>('/api/worklogs/stories/', data)
+      const response = await apiClient.post<Story>('/api/stories/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -435,7 +435,7 @@ class WorkLogService {
   async listTasks(storyId?: number): Promise<Task[]> {
     try {
       const params = storyId ? { story: storyId } : {}
-      const response = await apiClient.get<Task[]>('/api/worklogs/tasks/', { params })
+      const response = await apiClient.get<Task[]>('/api/tasks/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -444,7 +444,7 @@ class WorkLogService {
 
   async createTask(data: Partial<Task>): Promise<Task> {
     try {
-      const response = await apiClient.post<Task>('/api/worklogs/tasks/', data)
+      const response = await apiClient.post<Task>('/api/tasks/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -456,7 +456,7 @@ class WorkLogService {
   async listSprints(projectId?: number): Promise<Sprint[]> {
     try {
       const params = projectId ? { project: projectId } : {}
-      const response = await apiClient.get<Sprint[]>('/api/worklogs/sprints/', { params })
+      const response = await apiClient.get<Sprint[]>('/api/sprints/', { params })
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -465,7 +465,7 @@ class WorkLogService {
 
   async createSprint(data: Partial<Sprint>): Promise<Sprint> {
     try {
-      const response = await apiClient.post<Sprint>('/api/worklogs/sprints/', data)
+      const response = await apiClient.post<Sprint>('/api/sprints/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -666,7 +666,7 @@ class WorkLogService {
   
   async listPresets(): Promise<WorkLogPreset[]> {
     try {
-      const response = await apiClient.get<WorkLogPreset[]>('/api/worklogs/presets/')
+      const response = await apiClient.get<WorkLogPreset[]>('/api/worklog-presets/')
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -675,7 +675,7 @@ class WorkLogService {
 
   async createPreset(data: Partial<WorkLogPreset>): Promise<WorkLogPreset> {
     try {
-      const response = await apiClient.post<WorkLogPreset>('/api/worklogs/presets/', data)
+      const response = await apiClient.post<WorkLogPreset>('/api/worklog-presets/', data)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -686,7 +686,7 @@ class WorkLogService {
   
   async listReports(): Promise<WorkLogReport[]> {
     try {
-      const response = await apiClient.get<WorkLogReport[]>('/api/worklogs/reports/')
+      const response = await apiClient.get<WorkLogReport[]>('/api/worklog-reports/')
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
@@ -695,7 +695,7 @@ class WorkLogService {
 
   async getReport(id: number): Promise<WorkLogReport> {
     try {
-      const response = await apiClient.get<WorkLogReport>(`/api/worklogs/reports/${id}/`)
+      const response = await apiClient.get<WorkLogReport>(`/api/worklog-reports/${id}/`)
       return response.data
     } catch (error) {
       throw new Error(handleApiError(error))
