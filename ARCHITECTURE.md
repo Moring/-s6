@@ -41,7 +41,7 @@ The frontend uses **server-side rendering** with **HTMX** for reactive updates:
 
 ## Layering Rules
 
-### Backend Applications (19 apps)
+### Backend Applications (20 apps)
 - **frontend/**: Django templates + HTMX views for UI
 - **api/**: DRF boundary - thin controllers only (validate → call services/dispatch job → return)
 - **Domain apps** (`worklog/`, `skills/`, `reporting/`): Models + deterministic business logic only. No LLM calls, no queue calls, no orchestration logic
@@ -50,6 +50,7 @@ The frontend uses **server-side rendering** with **HTMX** for reactive updates:
 - **orchestration/**: Workflow composition (job → steps → agents → persistence)
 - **agents/**: AI logic only; no HTTP; no direct DB writes; operate through context
 - **llm/**: Provider abstraction; cost/usage accounting hooks (Ollama integration)
+- **flows/**: **NEW** - Unified flow engine for GUI prompt routing and execution
 - **observability/**: Structured event timeline + trace context for every job/LLM call
 - **system/**: Operator dashboard (read-only aggregates of jobs/events/schedules/health)
 - **tenants/**: Multi-tenancy model, roles, permissions, quotas
@@ -417,3 +418,87 @@ Current coverage:
 - See `ADMIN_GUIDE.md` for operational procedures
 - See `CHANGE_LOG.md` for change history
 - See `tool_context.md` for DAG specifications
+
+## Flow Engine Architecture
+
+### Overview
+The Flow Engine provides a unified, extensible system for routing and executing user prompts through declarative YAML-defined workflows.
+
+### Key Components
+
+**FlowEngine** (`apps/flows/engine.py`):
+- Unified entry point: `process_prompt()` handles all GUI messages
+- Orchestrates flow selection, context management, and execution
+- Discovers and loads flows on startup
+
+**FlowContext** (`apps/flows/context.py`):
+- Session-based stateful context management via Django cache
+- Tracks: active flow, current node, state dict, history, metadata
+- 30-minute TTL with automatic cleanup
+
+**FlowSelector** (`apps/flows/selector.py`):
+- LLM-based intelligent flow routing using Ollama/Gemma
+- Builds context-aware prompts for flow selection
+- Parses JSON responses, falls back to keyword matching
+
+**FlowLoader** (`apps/flows/plugins/flow_loader.py`):
+- Discovers and loads YAML flow definitions
+- Validates flow structure on load
+- Auto-scans `apps/flows/` directory
+
+**FlowExecutor** (`apps/flows/executor.py`):
+- Executes flows as directed acyclic graphs (DAGs)
+- Node types: prompt, action, condition, llm_call, end
+- Template variable replacement: `{{key}}` from context
+
+### Flow Definition (YAML)
+
+```yaml
+name: flow_name
+description: "Flow description"
+entry_node: start
+
+nodes:
+  start:
+    type: llm_call  # or prompt, action, condition, end
+    prompt: "Handle: {{user_input}}"
+    store_as: response
+    transitions:
+      - target: next_node
+  
+  end:
+    type: end
+    message: "{{response}}"
+```
+
+### Directory Structure
+
+```
+apps/flows/
+├── engine.py          # FlowEngine (unified entry point)
+├── context.py         # FlowContext (state management)
+├── selector.py        # FlowSelector (LLM routing)
+├── executor.py        # FlowExecutor (DAG execution)
+├── plugins/
+│   └── flow_loader.py # YAML loader
+├── default/
+│   └── flow.yaml      # Default support flow
+└── support/
+    └── flow.yaml      # Technical support flow
+```
+
+### Adding New Flows
+
+1. Create directory: `apps/flows/my_flow/`
+2. Add `flow.yaml` with node definitions
+3. Restart app or call `engine.reload_flows()`
+4. Flow automatically discovered and available
+
+### Extensibility
+
+- **Custom node types**: Register handlers with NodeExecutor
+- **Custom selection**: Subclass FlowSelector
+- **Persistent context**: Replace cache backend with database
+- **External integrations**: Add action nodes for APIs, webhooks, etc.
+
+See `tool_context.md` for complete documentation.

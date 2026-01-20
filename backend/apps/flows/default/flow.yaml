@@ -1,0 +1,97 @@
+name: default
+description: Default support flow for general questions and documentation
+
+metadata:
+  version: "1.0"
+  author: "DigiMuse.ai"
+  category: "support"
+
+entry_node: start
+
+nodes:
+  start:
+    type: llm_call
+    prompt: |
+      You are DigiMuse.ai assistant helping with general questions.
+      
+      User authentication: {{auth_status}}
+      User question: {{user_input}}
+      
+      Available documentation topics:
+      - Work logs: Track daily work activities
+      - Skills: Analyze professional skills
+      - Reports: Generate career summaries
+      - Billing: Manage account balance
+      - Dashboard: View statistics
+      
+      Provide a helpful, concise answer. If the question requires authentication
+      and the user is not logged in, suggest they log in first.
+      
+      If you cannot answer the question, offer to connect them with a developer
+      via Discord for technical support.
+    store_as: ai_response
+    transitions:
+      - target: check_satisfaction
+
+  check_satisfaction:
+    type: prompt
+    message: "{{ai_response}}\n\nDid this answer your question? (yes/no)"
+    requires_input: true
+    store_as: satisfaction
+    transitions:
+      - target: evaluate_satisfaction
+
+  evaluate_satisfaction:
+    type: condition
+    condition: "satisfaction == yes"
+    transitions:
+      - when: "true"
+        target: satisfied_end
+        message: "Great! Feel free to ask if you have more questions."
+      - when: "false"
+        target: offer_escalation
+        message: ""
+
+  offer_escalation:
+    type: prompt
+    message: |
+      I'm sorry I couldn't fully help. Would you like to:
+      1. Try asking your question differently
+      2. Contact our developers on Discord for technical support
+      
+      Type '1' to rephrase, or '2' for Discord support.
+    requires_input: true
+    store_as: escalation_choice
+    transitions:
+      - target: handle_escalation
+
+  handle_escalation:
+    type: condition
+    condition: "escalation_choice == 1"
+    transitions:
+      - when: "true"
+        target: start
+        message: "Sure, please rephrase your question:"
+      - when: "false"
+        target: discord_support
+        message: ""
+
+  discord_support:
+    type: prompt
+    message: |
+      You can get help from our developers on Discord:
+      https://discord.gg/digimuse
+      
+      Our community is active and ready to help with:
+      - Technical questions
+      - Feature requests  
+      - Bug reports
+      - General feedback
+      
+      Join the conversation and we'll assist you there!
+    transitions:
+      - target: satisfied_end
+
+  satisfied_end:
+    type: end
+    message: "Thank you for using DigiMuse.ai! Have a great day!"

@@ -1,0 +1,89 @@
+name: support
+description: Technical support and developer contact flow
+
+metadata:
+  version: "1.0"
+  author: "DigiMuse.ai"
+  category: "support"
+
+entry_node: start
+
+nodes:
+  start:
+    type: prompt
+    message: |
+      Welcome to Technical Support!
+      
+      I can help you with:
+      1. Account issues
+      2. Billing questions
+      3. Technical problems
+      4. Feature requests
+      5. Connect with developers
+      
+      Please select an option (1-5) or describe your issue:
+    requires_input: true
+    store_as: support_choice
+    transitions:
+      - target: route_support
+
+  route_support:
+    type: condition
+    condition: "support_choice exists"
+    transitions:
+      - when: "true"
+        target: handle_support
+
+  handle_support:
+    type: llm_call
+    prompt: |
+      User needs support with: {{support_choice}}
+      User is {{auth_status}}
+      
+      Provide specific guidance based on their issue. If it's a technical
+      problem that requires developer attention, guide them to Discord.
+      
+      For account/billing issues when user is logged in, explain they can
+      access settings via the user menu (top right avatar).
+      
+      For features/bugs, encourage them to join Discord community.
+    store_as: support_response
+    transitions:
+      - target: provide_response
+
+  provide_response:
+    type: prompt
+    message: "{{support_response}}\n\nWould you like to connect with our developers on Discord? (yes/no)"
+    requires_input: true
+    store_as: discord_choice
+    transitions:
+      - target: check_discord
+
+  check_discord:
+    type: condition
+    condition: "discord_choice == yes"
+    transitions:
+      - when: "true"
+        target: discord_info
+      - when: "false"
+        target: satisfied_end
+
+  discord_info:
+    type: prompt
+    message: |
+      Great! Join our Discord community:
+      https://discord.gg/digimuse
+      
+      You'll find:
+      - #support channel for help
+      - #feature-requests for suggestions
+      - #announcements for updates
+      - Direct access to developers
+      
+      See you there!
+    transitions:
+      - target: satisfied_end
+
+  satisfied_end:
+    type: end
+    message: "Thank you for reaching out. We're here to help anytime!"

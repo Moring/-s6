@@ -7906,3 +7906,367 @@ All frontend tests passing:
 
 ---
 
+
+---
+
+## 2026-01-20 (Evening) - Unified Flow Engine with LLM-Based Routing
+
+### Summary
+Implemented a comprehensive flow engine system that routes all GUI prompts through a unified entry point, uses LLM-based flow selection, and executes YAML-defined flows as DAGs with stateful context management.
+
+### ✅ What Changed
+
+**Unified Flow Engine Architecture:**
+- Single entry point: `FlowEngine.process_prompt()` handles all GUI messages
+- LLM-based flow selection: Uses Ollama/Gemma to intelligently route to appropriate flow
+- YAML-defined flows: Declarative flow definitions with human-readable syntax
+- DAG execution: Flows execute as directed acyclic graphs with state management
+- Stateful context: User interactions maintain state across multiple prompts via cache
+- Plugin architecture: Extensible system for custom node types and flows
+
+**Core Components:**
+
+1. **FlowEngine** (`apps/flows/engine.py`)
+   - Unified entry point orchestrating all flow processing
+   - Normalizes user context (auth, metadata)
+   - Manages flow discovery and loading
+   - Coordinates selection, context, and execution
+
+2. **FlowContext** (`apps/flows/context.py`)
+   - Session-based stateful context management
+   - Stores: active flow, current node, state dict, history, metadata
+   - Django cache backend (30-minute TTL)
+   - Tracks up to 20 recent interactions
+
+3. **FlowSelector** (`apps/flows/selector.py`)
+   - LLM-based intelligent flow routing
+   - Builds context-aware prompts for Ollama
+   - Parses JSON responses with flow selection
+   - Fallback to keyword matching if LLM parse fails
+   - Temperature: 0.3 for deterministic selection
+
+4. **FlowLoader** (`apps/flows/plugins/flow_loader.py`)
+   - Discovers and loads YAML flow definitions
+   - Validates flow structure (nodes, transitions, entry points)
+   - Auto-scans `apps/flows/` directory on startup
+   - Returns FlowDefinition objects with validation
+
+5. **FlowExecutor** (`apps/flows/executor.py`)
+   - Executes flows as DAGs with state management
+   - NodeExecutor with pluggable handlers
+   - Supports node types: prompt, action, condition, llm_call, end
+   - Template variables: `{{key}}` replaced from context/metadata
+   - Updates context and history on each node execution
+
+**Built-in Node Types:**
+- `prompt`: Display message, optionally wait for input, store in state
+- `action`: Execute operation (logged, extensible)
+- `condition`: Branch based on state evaluation
+- `llm_call`: Call LLM with templated prompt, store response
+- `end`: Terminate flow and reset context
+
+**Default Flows:**
+
+1. **default** (`apps/flows/default/flow.yaml`)
+   - General support and documentation Q&A
+   - LLM-powered responses to user questions
+   - Satisfaction check and escalation path
+   - Discord support contact option
+
+2. **support** (`apps/flows/support/flow.yaml`)
+   - Technical support and developer contact
+   - Guided support type selection
+   - Context-aware assistance
+   - Discord community integration
+
+**Frontend Integration:**
+- Updated `ChatSendView` to use FlowEngine as unified entry point
+- Backward compatibility: login/signup/logout/dashboard commands handled directly
+- All other messages routed through flow engine
+- Session key management for context tracking
+
+**Directory Structure:**
+```
+backend/apps/flows/
+├── __init__.py
+├── apps.py                    # Django app config
+├── engine.py                  # FlowEngine (unified entry point)
+├── context.py                 # FlowContext (state management)
+├── selector.py                # FlowSelector (LLM routing)
+├── executor.py                # FlowExecutor + NodeExecutor (DAG)
+├── plugins/
+│   ├── __init__.py
+│   └── flow_loader.py         # YAML loader
+├── default/
+│   └── flow.yaml              # Default support flow
+└── support/
+    └── flow.yaml              # Technical support flow
+```
+
+### 🔄 How to Verify
+
+```bash
+# 1. Check Django
+cd backend
+python manage.py check
+# Output: System check identified no issues
+# Should see: "Discovered 2 flows: ['default', 'support']"
+
+# 2. Run tests
+python -m pytest frontend/tests.py -v
+# Output: 16 passed, 1 warning
+
+# 3. Start services
+docker compose up -d postgres valkey minio ollama
+python manage.py runserver
+
+# 4. Test flow engine in browser
+# Open: http://localhost:8000/
+# Type: "help" or "What features are available?"
+# Should get AI-powered response from default flow
+
+# 5. Test flow selection
+# Type: "I need support" → should route to support flow
+# Type: "How do I track my work?" → should route to default flow with info
+
+# 6. Test stateful flows
+# Type: "help" → AI responds
+# Type: "yes" (when asked about satisfaction) → flow completes
+# Type: "no" → escalation path offered
+```
+
+**Test Flow Context:**
+```python
+from apps.flows.context import FlowContext
+context = FlowContext('test_session')
+context.set_state('username', 'alice')
+print(context.to_dict())
+# Shows: flow_name, current_node, state, history, metadata
+```
+
+**List Available Flows:**
+```python
+from apps.flows.engine import FlowEngine
+engine = FlowEngine()
+print(engine.list_flows())
+```
+
+### 📝 Features
+
+**Unified Entry Point:**
+- ✅ Single method processes all GUI prompts
+- ✅ User context normalized (auth, session, metadata)
+- ✅ Flow selection occurs at entry point
+- ✅ Execution state initialized or resumed
+
+**LLM-Based Flow Selection:**
+- ✅ Gemma model via Ollama for intelligent routing
+- ✅ Context-aware prompts (user message, auth, active flow)
+- ✅ Structured function response with flow name and confidence
+- ✅ Validation of selected flow exists
+- ✅ Fallback to keyword matching
+
+**YAML-Defined Flows:**
+- ✅ Human-readable declarative syntax
+- ✅ Node definitions with types and transitions
+- ✅ Variable templating in messages and prompts
+- ✅ Validation on load (nodes, transitions, entry points)
+- ✅ Easy to version control and diff
+
+**DAG Execution:**
+- ✅ Flows execute as directed acyclic graphs
+- ✅ State management across nodes
+- ✅ History tracking (last 20 interactions)
+- ✅ Node handler registration for extensibility
+- ✅ Template variable replacement
+
+**Stateful Context:**
+- ✅ Session-based context storage (cache)
+- ✅ Survives across multiple prompts
+- ✅ Tracks: flow, node, state, history, metadata
+- ✅ Automatic cleanup (30-minute TTL)
+- ✅ Reset on flow completion
+
+**Plugin Architecture:**
+- ✅ Directory-based flow discovery
+- ✅ Custom node type handlers
+- ✅ YAML loader plugin
+- ✅ Extensible for future node types
+- ✅ Hot-reload capability
+
+**Default Flow Behavior:**
+- ✅ Falls back to default flow when no match
+- ✅ Different behavior for authenticated vs anonymous users
+- ✅ Offers escalation to Discord support
+- ✅ Interactive satisfaction check
+- ✅ LLM-powered responses
+
+### 🎯 User Experience
+
+**Before:**
+- Hardcoded command handlers in views.py
+- Limited conversational ability
+- No stateful interactions
+- Adding new flows required code changes
+
+**After:**
+- AI-powered flow selection
+- Natural language understanding
+- Stateful multi-step interactions
+- New flows added by dropping YAML files
+- Context-aware responses
+- Seamless flow transitions
+
+**Example Interaction:**
+```
+User: "What features are available?"
+Bot: [LLM explains features based on auth status]
+Bot: "Did this answer your question? (yes/no)"
+User: "no"
+Bot: "Would you like to: 1. Rephrase, or 2. Contact developers?"
+User: "2"
+Bot: [Provides Discord link and info]
+Bot: "Thank you for using DigiMuse.ai!"
+[Flow completes, context reset]
+```
+
+### 📊 Test Results
+
+```
+======================== 16 passed, 1 warning in 5.68s =========================
+```
+
+All frontend tests passing:
+- 3 IndexView tests
+- 5 ChatSendView tests (updated for flow engine)
+- 2 DashboardCardView tests
+- 4 LoginFormView tests
+- 2 StatusBarView tests
+
+**Test Updates:**
+- Updated help command tests to work with flow engine
+- Updated private feature test to check auth properly
+- All tests now compatible with unified entry point
+
+### 🔐 Security
+
+✅ All security features maintained:
+- Session-based authentication
+- CSRF protection
+- No sensitive data in flow context
+- LLM runs locally (Ollama)
+- Context stored in secure cache
+- TTL prevents stale data
+- User data scoped to session
+
+### 📋 Human TODOs
+
+**Required:**
+- [ ] Ensure Ollama container running for flow selection
+- [ ] Review and customize default/support flows for your use case
+- [ ] Add brand-specific Discord invite link
+
+**Flow Development:**
+- [ ] Create login/signup flows (currently handled directly)
+- [ ] Create worklog management flow
+- [ ] Create skills analysis flow
+- [ ] Create dashboard/settings flows
+- [ ] Add onboarding flow for new users
+
+**Customization:**
+- [ ] Adjust LLM selection prompts for better routing
+- [ ] Add custom node types (email, API calls, etc.)
+- [ ] Create flow templates library
+- [ ] Add flow analytics/logging
+
+**Optional Enhancements:**
+- [ ] Persistent context storage (move from cache to database)
+- [ ] Flow versioning and rollback
+- [ ] A/B testing flows
+- [ ] Visual flow editor
+- [ ] Async node execution for long-running operations
+
+**Documentation:**
+- [ ] Add Ollama setup to ADMIN_GUIDE.md
+- [ ] Create flow authoring guide
+- [ ] Document custom node type development
+- [ ] Add flow testing guide
+
+### 🔮 Future Enhancements
+
+**Flow Engine:**
+- Streaming LLM responses for real-time chat
+- Flow composition (call flows from flows)
+- Parallel node execution
+- Webhook trigger nodes
+- External API integration nodes
+- Scheduled flow triggers
+
+**Context Management:**
+- Database persistence for long-term state
+- User profile integration
+- Cross-session state sharing
+- Context migration/export
+
+**Flow Authoring:**
+- Visual flow designer/editor
+- Flow templates marketplace
+- Version control integration
+- Testing framework for flows
+- Flow validation CLI
+
+**Analytics:**
+- Flow completion rates
+- Drop-off analysis
+- User satisfaction metrics
+- A/B testing framework
+- Performance monitoring
+
+### 🏗️ Architecture Compliance
+
+✅ **All constraints respected:**
+- No service boundary changes
+- Added new app to existing structure
+- Proper Django layering maintained
+- Multi-tenancy enforced (session-based)
+- Tests passing (16/16)
+- Documentation updated (tool_context.md)
+- No breaking changes to existing features
+- Backward compatible command handlers
+
+**Design Principles:**
+- Single responsibility: Each component has clear purpose
+- Open/closed: Extensible via plugins without modification
+- Dependency inversion: Abstract interfaces (LLMProvider, node handlers)
+- Separation of concerns: Selection | Context | Execution | Loading
+
+### 📚 Files Changed
+
+**New Files:**
+- `backend/apps/flows/__init__.py`
+- `backend/apps/flows/apps.py` - Django app configuration
+- `backend/apps/flows/engine.py` - FlowEngine (unified entry point)
+- `backend/apps/flows/context.py` - FlowContext (state management)
+- `backend/apps/flows/selector.py` - FlowSelector (LLM routing)
+- `backend/apps/flows/executor.py` - FlowExecutor + NodeExecutor
+- `backend/apps/flows/plugins/__init__.py`
+- `backend/apps/flows/plugins/flow_loader.py` - YAML loader
+- `backend/apps/flows/default/flow.yaml` - Default support flow
+- `backend/apps/flows/support/flow.yaml` - Technical support flow
+- `tool_context.md` - Comprehensive flow engine documentation
+
+**Modified Files:**
+- `backend/config/settings/base.py` - Added flows app to INSTALLED_APPS
+- `backend/frontend/views.py` - Updated ChatSendView to use FlowEngine
+- `backend/frontend/tests.py` - Updated tests for flow engine compatibility
+- `CHANGE_LOG.md` - This entry
+
+**Documentation Status:**
+- ✅ tool_context.md - Complete flow engine documentation
+- ✅ CHANGE_LOG.md - Comprehensive changelog
+- ⏳ ARCHITECTURE.md - Flow engine section needed
+- ⏳ README.md - Flow engine mention needed
+- ⏳ ADMIN_GUIDE.md - Flow management section needed
+
+---
+

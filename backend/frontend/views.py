@@ -37,7 +37,7 @@ class IndexView(TemplateView):
 
 
 class ChatSendView(View):
-    """Handle chat message submissions via HTMX."""
+    """Handle chat message submissions via HTMX - UNIFIED ENTRY POINT."""
     
     def post(self, request):
         message = request.POST.get('message', '').strip()
@@ -49,54 +49,129 @@ class ChatSendView(View):
                 'is_bot': True
             })
         
-        # Check for auth flow continuation
+        # Check for legacy auth flow continuation (backward compatibility)
         auth_flow = request.session.get('auth_flow')
         if auth_flow == 'login':
             return self._handle_login_flow(request, message)
         elif auth_flow == 'signup':
             return self._handle_signup_flow(request, message)
         
-        # Check for special commands
+        # Check for specific commands that bypass flow engine (for now)
         message_lower = message.lower()
         
-        # Not authenticated - handle login/signup/public commands
-        if not request.user.is_authenticated:
-            if message_lower == 'login':
-                return self._start_login(request)
-            elif message_lower == 'signup':
-                return self._start_signup(request)
-            elif message_lower in ['help', 'commands']:
-                return self._show_help(request, authenticated=False)
-            else:
-                # Check if user is trying to access private features
-                private_keywords = ['worklog', 'skills', 'report', 'dashboard', 'profile', 'settings']
-                if any(keyword in message_lower for keyword in private_keywords):
-                    return render(request, 'frontend/partials/chat_message.html', {
-                        'is_bot': True,
-                        'message': 'Please login or signup to continue.',
-                        'show_login_prompt': True
-                    })
-                else:
-                    return render(request, 'frontend/partials/chat_message.html', {
-                        'is_bot': True,
-                        'message': 'Ask a question, or type "login" or "signup".',
-                        'show_help': True
-                    })
-        
-        # Authenticated - handle commands and chat
-        if message_lower in ['help', 'commands']:
-            return self._show_help(request, authenticated=True)
+        # Handle login/signup commands directly for now
+        if message_lower == 'login':
+            return self._start_login(request)
+        elif message_lower == 'signup':
+            return self._start_signup(request)
+        elif message_lower == 'dashboard':
+            # Check auth before showing dashboard
+            if not request.user.is_authenticated:
+                return render(request, 'frontend/partials/chat_message.html', {
+                    'is_bot': True,
+                    'message': 'Please login first to view your dashboard.',
+                })
+            return self._show_dashboard(request)
         elif message_lower == 'logout':
             return self._handle_logout(request)
-        elif message_lower == 'dashboard':
-            return self._show_dashboard(request)
-        elif message_lower.startswith('reset password'):
-            return self._handle_password_reset(request, message)
-        elif request.user.is_staff and message_lower.startswith('admin '):
-            return self._handle_admin_command(request, message)
         
-        # If message doesn't match any command, send to AI
-        return self._handle_ai_chat(request, message)
+        # UNIFIED ENTRY POINT: Process through FlowEngine
+        from apps.flows.engine import FlowEngine
+        
+        engine = FlowEngine()
+        
+        # Build user data context
+        user_data = {}
+        if request.user.is_authenticated:
+            user_data = {
+                'username': request.user.username,
+                'user_id': request.user.id,
+                'tenant_id': getattr(request.user, 'tenant_id', None)
+            }
+        
+        # Get session key for context tracking
+        session_key = request.session.session_key
+        if not session_key:
+            # Create session if it doesn't exist
+            request.session.create()
+            session_key = request.session.session_key
+        
+        # Process prompt through unified engine
+        result = engine.process_prompt(
+            user_prompt=message,
+            session_key=session_key,
+            is_authenticated=request.user.is_authenticated,
+            user_data=user_data
+        )
+        
+        # Return formatted response
+        return render(request, 'frontend/partials/chat_response.html', {
+            'user_message': message,
+            'bot_message': result.get('response', 'I encountered an error processing your request.'),
+            'flow_active': result.get('flow_active', False),
+            'requires_input': result.get('requires_input', False),
+            'error': result.get('error', False)
+        })
+    
+    def _start_login(self, request):
+        """Initiate login flow."""
+        # Store state in session
+        request.session['auth_flow'] = 'login'
+        request.session['auth_step'] = 'username'
+        
+        return render(request, 'frontend/partials/chat_message.html', {
+            'is_bot': True,
+            'message': 'Enter username:',
+            'show_input': True,
+            'input_type': 'text',
+            'input_placeholder': 'Username'
+        })
+    
+    def _start_signup(self, request):
+        """Initiate signup flow."""
+        request.session['auth_flow'] = 'signup'
+        request.session['auth_step'] = 'username'
+        request.session['signup_data'] = {}
+        
+        return render(request, 'frontend/partials/chat_message.html', {
+            'is_bot': True,
+            'message': 'Enter username:',
+            'show_input': True,
+            'input_type': 'text',
+            'input_placeholder': 'Username'
+        })
+    
+    def _show_dashboard(self, request):
+        """Show dashboard."""
+        if not request.user.is_authenticated:
+            return render(request, 'frontend/partials/chat_message.html', {
+                'is_bot': True,
+                'message': 'Please login first to view your dashboard.',
+            })
+        
+        # Return HTMX response that loads dashboard in canvas
+        return render(request, 'frontend/partials/chat_message.html', {
+            'is_bot': True,
+            'message': 'Loading dashboard...',
+            'trigger_canvas_load': 'dashboard'
+        })
+    
+    def _handle_logout(self, request):
+        """Handle logout command."""
+        if not request.user.is_authenticated:
+            return render(request, 'frontend/partials/chat_message.html', {
+                'is_bot': True,
+                'message': 'You are not logged in.',
+            })
+        
+        username = request.user.username
+        logout(request)
+        
+        return render(request, 'frontend/partials/chat_message.html', {
+            'is_bot': True,
+            'message': f'Goodbye, {username}! You have been logged out.',
+        })
+
     
     def _start_login(self, request):
         """Initiate login flow."""

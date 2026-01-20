@@ -146,15 +146,34 @@
                     </ul>
                 </div>
                 {% else %}
-                <div class="d-flex gap-2">
-                    <button class="btn btn-sm btn-outline-primary" 
-                            onclick="document.getElementById('chat-input').value='login'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true}));">
-                        Sign In
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none p-0" 
+                            type="button" 
+                            id="guestMenuDropdown" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Generic graphicon avatar for guest -->
+                            <div class="avatar-circle" title="Account">
+                                <i class="ti ti-user" style="font-size:18px;color:rgba(255,255,255,0.95);"></i>
+                            </div>
+                            <i class="ti ti-chevron-down"></i>
+                        </div>
                     </button>
-                    <button class="btn btn-sm btn-primary" 
-                            onclick="document.getElementById('chat-input').value='signup'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true}));">
-                        Sign Up
-                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="guestMenuDropdown">
+                        <li>
+                            <a class="dropdown-item" href="#" 
+                               onclick="document.getElementById('chat-input').value='login'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
+                                <i class="ti ti-login me-2"></i>Sign In
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" 
+                               onclick="document.getElementById('chat-input').value='signup'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
+                                <i class="ti ti-user-plus me-2"></i>Sign Up
+                            </a>
+                        </li>
+                    </ul>
                 </div>
                 {% endif %}
             </div>

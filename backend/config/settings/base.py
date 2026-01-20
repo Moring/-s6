@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'apps.orchestration',
     'apps.agents',
     'apps.llm',
+    'apps.flows',  # NEW: Unified flow engine
     'apps.storage',
     'apps.api',
     'apps.system',
