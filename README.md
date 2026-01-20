@@ -1,22 +1,24 @@
-# AfterResume - Complete System
+# DigiMuse.ai - Complete System
 
-AI-powered career intelligence platform with Django + DRF backend and Vue 3 SPA frontend, running in Docker with Traefik reverse proxy.
+AI-powered career intelligence platform with Django full-stack architecture (templates + HTMX), running in Docker with comprehensive backend services.
 
 **Status**: ✅ Production-Ready Core (100% Core Features, 75% Advanced Features)  
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-09
+**Version**: 2.0.0  
+**Last Updated**: 2026-01-20
 
 ## ✨ Key Features
 
 - ✅ **Multi-tenant SaaS** - Complete tenant isolation with user profiles
 - ✅ **Invite-only signup** - Secure passkey-based onboarding
-- ✅ **JWT authentication** - Short-lived access tokens + refresh cookies
+- ✅ **Django Full-Stack** - Django templates + HTMX for reactive UI
+- ✅ **Conversational UI** - Chat-based interface with AI integration
+- ✅ **Ollama Integration** - Local AI chat powered by Ollama (unlimited tokens)
+- ✅ **Traditional Forms** - Login form and settings for familiar UX
 - ✅ **Worklog management** - Track work entries with rich metadata
 - ✅ **Skills Library** - Evidence-based skills extraction from work
-- ✅ **AI Chat Integration** - Context-aware AI assistant on content pages
 - ✅ **Billing system** - Stripe integration with reserve balances
 - ✅ **Admin dashboards** - User management, billing, and metrics
-- ✅ **Real-time status** - Live updates via API polling (footer stats)
+- ✅ **Real-time status** - Live updates via HTMX polling
 - ✅ **Job processing** - Async background tasks with Huey
 - ✅ **Object storage** - MinIO for file uploads and artifacts
 - ✅ **Comprehensive audit** - Full event logging for compliance
@@ -27,53 +29,61 @@ AI-powered career intelligence platform with Django + DRF backend and Vue 3 SPA 
 # 1. Copy environment file
 cp .env.example .env
 
-# 2. Start all services (backend + frontend + Traefik)
+# 2. Start all services (backend + Postgres + Ollama + MinIO + etc.)
 task up
 
 # 3. Run migrations and create admin user
 task bootstrap
 
-# 4. Access the system
-# Frontend: http://localhost (via Traefik)
-# Backend API: http://localhost:8000
-# Traefik Dashboard: http://localhost:8080
+# 4. Create invite passkey (for signup)
+cd backend
+python manage.py shell
+>>> from apps.invitations.models import InvitePasskey
+>>> InvitePasskey.objects.create(key="WELCOME2026", is_active=True, max_uses=10)
+>>> exit()
+
+# 5. Access the system
+# Application: http://localhost:8000
 # MinIO Console: http://localhost:9001
+# Postgres: localhost:5432
 ```
 
 ### Development Mode
 
 ```bash
-# Frontend dev server (hot reload)
-cd frontend
-npm run dev
-# Access: http://localhost:3000
-
-# Backend dev server
+# Run Django dev server
 cd backend
 python manage.py runserver
 # Access: http://localhost:8000
+
+# The UI is served directly from Django (templates + HTMX)
+# No separate frontend build process needed!
 ```
 
-Note: The Vue 3 SPA frontend is built in `frontend/` (see `frontend/README.md`). The production frontend container serves the SPA via nginx on port 3000, with Traefik handling routing and SSL termination.
-
-Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT access token, and refreshes via `/api/auth/token/refresh/` using an HttpOnly refresh cookie.
+Auth note: The system uses Django session-based authentication with optional "remember me" (30-day sessions). The chat interface and canvas cards update reactively via HTMX.
 
 ## 📦 System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  AfterResume System                     │
+│                  DigiMuse.ai System                     │
 │                                                         │
-│  Traefik (Ports 80/443)                                │
-│  └─ Reverse Proxy + SSL                                │
+│  Django Full-Stack (Port 8000)                         │
+│  ├─ Templates + HTMX UI                                │
+│  ├─ Chat Interface                                     │
+│  ├─ Canvas Display                                     │
+│  ├─ Top Bar with User Menu                            │
+│  ├─ REST API (DRF)                                     │
+│  ├─ Session Auth                                       │
+│  └─ Static Assets                                      │
 │                                                         │
-│  Frontend (Port 3000)          Backend (Port 8000)     │
-│  ├─ Vue 3 SPA (nginx)          ├─ Django + DRF API     │
-│  ├─ DigiMuse.AI Branding       ├─ Postgres Database    │
-│  ├─ AI Chat Integration        ├─ Valkey Queue         │
-│  └─ Gravatar Avatars           ├─ MinIO Storage        │
-│                                 ├─ Huey Workers         │
-│                                 └─ AI Agents + LLM      │
+│  Backend Services                                       │
+│  ├─ Postgres Database                                  │
+│  ├─ Valkey Queue                                       │
+│  ├─ MinIO Storage                                      │
+│  ├─ Ollama (AI Chat)                                   │
+│  ├─ Huey Workers                                       │
+│  └─ AI Agents + LLM                                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -81,19 +91,18 @@ Auth note: the SPA signs in via `/api/auth/login/`, stores a short-lived JWT acc
 
 - Docker & Docker Compose
 - Task (taskfile.dev) - optional but recommended
-- curl & jq - for testing
+- Python 3.11+ (for local development)
 
 ## 📋 Available Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| Traefik | 80, 443, 8080 | Reverse proxy & SSL (dashboard: 8080) |
-| Frontend | 3000 | Web UI (Vue 3 SPA, nginx) |
-| Backend API | 8000 | REST API (Django + DRF) |
+| Django App | 8000 | Full-stack application (UI + API) |
 | Postgres | 5432 | Primary database |
 | Valkey | 6379 | Job queue |
 | MinIO | 9000 | Object storage |
 | MinIO Console | 9001 | Storage admin UI |
+| Ollama | 11434 | Local AI inference |
 
 ## 🎯 Task Commands
 

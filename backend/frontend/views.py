@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import UserProfile
 from apps.invitations.models import InvitePasskey
+from apps.llm.client import get_llm_client
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +94,9 @@ class ChatSendView(View):
             return self._handle_password_reset(request, message)
         elif request.user.is_staff and message_lower.startswith('admin '):
             return self._handle_admin_command(request, message)
-        else:
-            # Regular chat message - echo for now
-            return render(request, 'frontend/partials/chat_response.html', {
-                'user_message': message,
-                'bot_message': f'You said: {message}. (AI integration coming soon)',
-                'is_bot': True
-            })
+        
+        # If message doesn't match any command, send to AI
+        return self._handle_ai_chat(request, message)
     
     def _start_login(self, request):
         """Initiate login flow."""
@@ -462,6 +459,14 @@ class LoginFormView(View):
             return render(request, 'frontend/partials/login_form_card.html', {
                 'error': 'We do not recognize that username and password. Please try again.'
             })
+
+
+class LogoutView(View):
+    """Handle logout."""
+    
+    def post(self, request):
+        logout(request)
+        return JsonResponse({'success': True, 'message': 'Logged out successfully'})
 
 
 class StatusBarView(View):

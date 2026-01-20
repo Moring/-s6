@@ -3,10 +3,10 @@
 <html lang="en" data-bs-theme="light" data-menu-color="dark" data-topbar-color="light">
 <head>
     <meta charset="utf-8" />
-    <title>{% block title %}AfterResume - AI-Powered Career Intelligence{% endblock %}</title>
+    <title>{% block title %}DigiMuse.ai - AI-Powered Career Intelligence{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="AI-powered career intelligence platform" name="description" />
-    <meta content="AfterResume" name="author" />
+    <meta content="DigiMuse.ai" name="author" />
 
     <!-- App favicon -->
     <link rel="shortcut icon" href="{% static 'assets/images/favicon.ico' %}">
@@ -20,12 +20,147 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     
-    {% block extra_css %}{% endblock %}
+    {% block extra_css %}
+    <style>
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+        
+        .top-bar {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .top-bar .brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .top-bar .user-menu {
+            margin-left: auto;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+    {% endblock %}
 </head>
 
 <body>
     <!-- Begin page -->
     <div class="wrapper">
+        <!-- Top Bar -->
+        <nav class="top-bar">
+            <!-- Brand -->
+            <a class="brand" href="/">DigiMuse.ai</a>
+            
+            <!-- Right side: User menu -->
+            <div class="user-menu">
+                {% if is_authenticated %}
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none p-0" 
+                            type="button" 
+                            id="userMenuDropdown" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false">
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- User Avatar/Graphicon -->
+                            <div class="avatar-circle">
+                                {{ username|slice:":1" }}
+                            </div>
+                            <span class="d-none d-md-inline">{{ username }}</span>
+                            <i class="ti ti-chevron-down"></i>
+                        </div>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
+                        <li><h6 class="dropdown-header">{{ username }}</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" 
+                               hx-get="{% url 'frontend:dashboard_card' %}" 
+                               hx-target="#canvas-area">
+                                <i class="ti ti-dashboard me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" 
+                               hx-get="{% url 'frontend:settings_card' %}" 
+                               hx-target="#canvas-area">
+                                <i class="ti ti-settings me-2"></i>Settings
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               onclick="alert('Billing & Payments coming soon'); return false;">
+                                <i class="ti ti-credit-card me-2"></i>Billing & Payments
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               onclick="alert('Profile settings coming soon'); return false;">
+                                <i class="ti ti-user me-2"></i>My Profile
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#"
+                               onclick="alert('Help & Documentation coming soon'); return false;">
+                                <i class="ti ti-help me-2"></i>Help & Support
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#"
+                               hx-post="{% url 'frontend:logout' %}"
+                               hx-swap="none"
+                               hx-on::after-request="location.reload()">
+                                <i class="ti ti-logout me-2"></i>Sign Out
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% else %}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" 
+                            onclick="document.getElementById('chat-input').value='login'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true}));">
+                        Sign In
+                    </button>
+                    <button class="btn btn-sm btn-primary" 
+                            onclick="document.getElementById('chat-input').value='signup'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true}));">
+                        Sign Up
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
         {% block content %}{% endblock %}
     </div>
 

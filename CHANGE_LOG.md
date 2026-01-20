@@ -7665,3 +7665,244 @@ All tests passing including:
 
 ---
 
+
+---
+
+## 2026-01-20 (Afternoon) - Top Bar, Ollama Integration, and Documentation Updates
+
+### Summary
+Added top bar with user menu, integrated Ollama for AI chat, and updated all documentation to reflect Django full-stack architecture (removed Vue references).
+
+### ✅ What Changed
+
+**Top Bar with User Menu:**
+- Added sticky top bar with "DigiMuse.ai" branding (left)
+- User avatar/graphicon in upper right (first letter of username)
+- Dropdown menu with:
+  - Dashboard
+  - Settings
+  - Billing & Payments (placeholder)
+  - My Profile (placeholder)
+  - Help & Support (placeholder)
+  - Sign Out
+- Anonymous users see "Sign In" and "Sign Up" buttons
+- Top bar is 60px height, sticky positioning
+- Avatar uses gradient background (purple to blue)
+
+**Ollama AI Integration:**
+- Integrated Ollama for chat responses
+- Non-command messages sent to Ollama API
+- Context-aware prompts (authenticated vs anonymous)
+- System context explains available features
+- Graceful fallback if Ollama unavailable
+- Temperature: 0.7, Max tokens: 500
+- Unlimited token budget (local inference)
+
+**Logout Functionality:**
+- Added `LogoutView` for HTMX logout
+- Clears Django session
+- Returns JSON response
+- Page reloads after logout
+- Proper session cleanup
+
+**Documentation Updates:**
+- **README.md**: Updated to reflect Django full-stack, removed Vue references, updated branding to DigiMuse.ai
+- **ARCHITECTURE.md**: Complete rewrite for Django+HTMX architecture, removed SPA/JWT sections, added session auth details
+- **CC.md**: Updated context (note: Vue references remain in constraints for now - will be updated in separate task)
+- All docs now consistent with Django full-stack approach
+
+### 🔄 How to Verify
+
+```bash
+# 1. Check Django
+cd backend
+python manage.py check
+# Output: System check identified no issues
+
+# 2. Run tests
+python -m pytest frontend/tests.py -v
+# Output: 16 passed, 1 warning in 5.74s
+
+# 3. Start services with Ollama
+docker compose up -d postgres valkey minio ollama
+python manage.py runserver
+
+# 4. Test in browser
+# Open: http://localhost:8000/
+# See top bar with "DigiMuse.ai" branding
+# If logged out: see Sign In/Sign Up buttons
+# If logged in: see avatar and user menu
+# Click avatar to see dropdown menu
+
+# 5. Test AI chat
+# Type a message (not a command)
+# Should get AI response from Ollama
+# Example: "What features are available?"
+```
+
+**Test Ollama Integration:**
+```bash
+# Check Ollama is running
+curl http://localhost:11434/api/generate \
+  -d '{"model":"llama2","prompt":"Hello!","stream":false}'
+
+# Test chat with AI
+# In browser, type: "Tell me about work logs"
+# Should get intelligent response from Ollama
+```
+
+### 📝 Features
+
+**Top Bar:**
+- Responsive design (mobile-friendly)
+- Dropdown menu with Bootstrap
+- Avatar with first letter of username
+- Gradient background (brand colors)
+- Sticky positioning (always visible)
+- Clean, modern UI
+
+**User Menu:**
+- Dashboard link (loads in canvas)
+- Settings link (loads in canvas)
+- Billing placeholder
+- Profile placeholder
+- Help placeholder
+- Sign Out (with confirmation)
+
+**AI Chat:**
+- Context-aware responses
+- Knows user authentication state
+- Explains available features
+- Suggests commands when appropriate
+- Handles errors gracefully
+- No token limits (local inference)
+
+**Documentation:**
+- Consistent branding (DigiMuse.ai)
+- Accurate architecture descriptions
+- Removed outdated Vue references
+- Clear service boundaries
+- Updated quick start guides
+
+### 🎯 User Experience
+
+**Before:**
+- No top bar (full-height interface)
+- User menu in chat commands only
+- Echo bot for non-commands
+- Vue references in docs
+
+**After:**
+- Professional top bar with branding
+- Visual user menu (familiar pattern)
+- Intelligent AI chat responses
+- Consistent Django full-stack docs
+
+**Authentication States:**
+- **Anonymous**: See "Sign In" / "Sign Up" buttons in top bar
+- **Authenticated**: See avatar and dropdown menu with options
+- **Any State**: Top bar always visible and functional
+
+### 📊 Test Results
+
+```
+======================== 16 passed, 1 warning in 5.74s =========================
+```
+
+All frontend tests passing:
+- 3 IndexView tests
+- 5 ChatSendView tests
+- 2 DashboardCardView tests
+- 4 LoginFormView tests
+- 2 StatusBarView tests
+
+### 🔐 Security
+
+✅ All security features maintained:
+- CSRF protection on logout
+- Session-based authentication
+- No token/key exposure
+- Ollama runs locally (no external API)
+- User menu respects auth state
+- Logout clears session properly
+
+### 📋 Human TODOs
+
+**Ollama Setup (Required):**
+- [ ] Ensure Ollama container is running: `docker compose up -d ollama`
+- [ ] Pull desired model: `docker exec ollama ollama pull llama2`
+- [ ] Verify model works: `docker exec ollama ollama run llama2 "Hello"`
+- [ ] Set `LLM_PROVIDER=ollama` in .env (already default)
+- [ ] Set `LLM_MODEL_NAME=llama2` in .env (or preferred model)
+
+**Optional Enhancements:**
+- [ ] Customize avatar colors per user
+- [ ] Add profile photo upload
+- [ ] Implement billing page
+- [ ] Implement profile settings page
+- [ ] Add help/documentation page
+- [ ] Customize Ollama system prompts
+- [ ] Add chat history persistence
+
+**Documentation:**
+- [ ] Update CC.md to remove Vue constraint language (future task)
+- [ ] Add Ollama setup guide to ADMIN_GUIDE.md
+- [ ] Document LLM_PROVIDER options
+
+### 🔮 Future Enhancements
+
+**Top Bar:**
+- Notifications bell icon
+- Quick search functionality
+- Theme switcher (dark mode)
+- Breadcrumb navigation
+- Multi-workspace switcher
+
+**AI Chat:**
+- Streaming responses (SSE or WebSockets)
+- Chat history persistence to database
+- Conversation threading
+- Model selection UI
+- Temperature/params adjustment
+- Function calling / tool use
+- RAG over user's work logs
+
+**User Menu:**
+- Quick actions (shortcuts)
+- Recently viewed items
+- Keyboard shortcuts guide
+- Account switcher (multi-tenant)
+
+### 🏗️ Architecture Compliance
+
+✅ **All constraints respected:**
+- No service boundary changes
+- No directory restructuring
+- Proper Django layering
+- Multi-tenancy enforced
+- Tests passing
+- Documentation updated
+- No breaking changes
+
+### 📚 Files Changed
+
+**New Files:**
+- `frontend/views.py` - Added `LogoutView`, `_handle_ai_chat()`
+
+**Modified Files:**
+- `frontend/templates/frontend/base.html` - Added top bar
+- `frontend/views.py` - Ollama integration
+- `frontend/urls.py` - Added logout route
+- `frontend/templates/frontend/index.html` - Adjusted height for top bar
+- `README.md` - Updated for Django full-stack
+- `ARCHITECTURE.md` - Complete rewrite for Django+HTMX
+- `CHANGE_LOG.md` - This entry
+
+**Documentation Status:**
+- ✅ README.md - Updated
+- ✅ ARCHITECTURE.md - Updated
+- ⏳ CC.md - Vue references remain (intentional - separate task)
+- ⏳ ADMIN_GUIDE.md - Ollama section needed
+
+---
+

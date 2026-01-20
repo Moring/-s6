@@ -1,28 +1,55 @@
-# AfterResume Architecture
+# DigiMuse.ai Architecture
 
 ## Overview
-AfterResume is a multi-tenant SaaS platform for managing work logs, skills tracking, and automated resume/report generation using AI workflows.
+DigiMuse.ai is a Django full-stack application for AI-powered career intelligence, work log management, and skills tracking. The system uses Django templates with HTMX for reactive UI, Ollama for AI chat, and background job processing for heavy workloads.
 
 ## Service Architecture
 
 ### Service Boundaries
-- **Frontend**: Vue SPA served by Caddy in production, with a Node proxy sidecar for `/api/*` (service-token injection)
-- **Backend**: Django + DRF orchestration service (AI workflows, persistence, storage, jobs, observability)
-- **Manager**: Dokploy (deployment control plane)
+- **Django Application**: Full-stack serving UI (templates + HTMX) and REST API (DRF)
+- **Postgres**: Primary data store
+- **Valkey**: Job queue and caching
+- **MinIO**: Object storage
+- **Ollama**: Local AI inference
+- **Huey Workers**: Background job execution
 
-Frontend never directly accesses Postgres, MinIO, Valkey, or workers. All persistence and authorization are owned by the backend.
-The frontend is a client-only SPA (no server-rendered HTML) and communicates with the backend exclusively over HTTP APIs.
+The Django application serves both the user interface (via templates) and API endpoints. All authentication uses Django sessions with optional "remember me" support.
+
+## Frontend Architecture
+
+### Django Templates + HTMX
+The frontend uses **server-side rendering** with **HTMX** for reactive updates:
+- No SPA framework (no Vue, React, Angular)
+- No frontend build process
+- Django templates for all HTML
+- HTMX for dynamic updates without page reloads
+- Bootstrap 5 for styling
+- Session-based authentication
+
+### UI Components
+- **Top Bar**: Brand logo, user menu with avatar
+- **Chat Panel**: Conversational interface with AI
+- **Canvas Panel**: Dynamic content area for forms/dashboards
+- **Status Bar**: Real-time token counts and balance
+
+### Authentication Flow
+1. User submits credentials via login form or chat
+2. Django authenticates and creates session
+3. Optional "remember me" extends session to 30 days
+4. HTMX requests include CSRF token automatically
+5. Session cookie authenticates all requests
 
 ## Layering Rules
 
 ### Backend Applications (19 apps)
+- **frontend/**: Django templates + HTMX views for UI
 - **api/**: DRF boundary - thin controllers only (validate → call services/dispatch job → return)
 - **Domain apps** (`worklog/`, `skills/`, `reporting/`): Models + deterministic business logic only. No LLM calls, no queue calls, no orchestration logic
 - **jobs/**: Persistent execution intent + status + schedules + retry/idempotency policy
 - **workers/**: Huey integration and job execution entrypoints
 - **orchestration/**: Workflow composition (job → steps → agents → persistence)
 - **agents/**: AI logic only; no HTTP; no direct DB writes; operate through context
-- **llm/**: Provider abstraction; cost/usage accounting hooks
+- **llm/**: Provider abstraction; cost/usage accounting hooks (Ollama integration)
 - **observability/**: Structured event timeline + trace context for every job/LLM call
 - **system/**: Operator dashboard (read-only aggregates of jobs/events/schedules/health)
 - **tenants/**: Multi-tenancy model, roles, permissions, quotas
@@ -53,12 +80,12 @@ Permissions enforced across:
 
 ## Security & Access Control
 
-### Service-to-Service Authentication
-- Frontend → Backend calls require signed internal token (`X-Service-Token` header)
-- Token format: `timestamp:hmac_signature`
-- Tokens expire after 5 minutes
-- Validation rejects expired, malformed, or invalid signatures
-- Public endpoints excluded: `/api/auth/`, `/api/healthz`, `/api/share/`
+### Session-Based Authentication
+- Django sessions with CSRF protection
+- HttpOnly session cookies
+- Secure cookies in production
+- SameSite: Lax policy
+- Optional "remember me" (30-day session)
 
 ### Web Hardening
 Security headers applied to all responses:
@@ -70,16 +97,10 @@ Security headers applied to all responses:
 - **Referrer-Policy**: strict-origin-when-cross-origin
 - **Permissions-Policy**: Denies geolocation, camera, microphone, etc.
 
-### Token & Session Security
-- Backend issues short-lived JWT access tokens to the SPA and stores refresh tokens in HttpOnly cookies
-- SPA sends `Authorization: Bearer <access>` on API calls and refreshes via `/api/auth/token/refresh/`
-- Session cookies remain for Django admin and staff-only server routes
-- HttpOnly cookies, Secure in production, SameSite: Lax
-- CSRF protection applies to session-authenticated endpoints
-
-### SPA CORS/CSRF Considerations
-- Prefer serving the SPA and API on the same origin via the frontend proxy
-- If cross-origin, configure `CSRF_TRUSTED_ORIGINS` (backend) and CORS allowlists
+### CSRF Protection
+- Django CSRF middleware enabled
+- CSRF token in forms and AJAX requests
+- HTMX includes CSRF token automatically
 
 ### Optional Admin Controls
 - IP allowlist for admin endpoints (`ADMIN_IP_ALLOWLIST` env var)
@@ -97,6 +118,9 @@ All configuration via environment variables. See `.env.example` for reference.
 - `DATABASE_URL` or `POSTGRES_*` variables
 - `REDIS_URL`: Valkey/Redis for caching and Huey queue
 - `MINIO_*`: Object storage configuration
+- `OLLAMA_ENDPOINT`: Ollama API endpoint (default: http://ollama:11434)
+- `LLM_PROVIDER`: LLM provider (ollama, vllm, local)
+- `LLM_MODEL_NAME`: Model name for LLM (e.g., llama2, mistral)
 
 **Security:**
 - `SERVICE_TO_SERVICE_SECRET`: Shared secret for frontend↔backend auth (falls back to SECRET_KEY)
