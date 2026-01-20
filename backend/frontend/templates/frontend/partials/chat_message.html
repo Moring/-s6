@@ -1,0 +1,29 @@
+{% load static %}
+
+<div class="message message-{% if error %}error{% elif success %}success{% elif is_bot %}bot{% else %}user{% endif %}" 
+     {% if trigger_canvas %}data-trigger-canvas="{{ trigger_canvas }}"{% endif %}
+     {% if reload_page %}data-reload-page="true"{% endif %}>
+    <div class="message-content">
+        {{ message|safe }}
+        
+        {% if commands %}
+        <ul class="mt-2 mb-0">
+            {% for cmd in commands %}
+            <li>{{ cmd }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if show_login_prompt %}
+        <div class="mt-2">
+            <small>Type <strong>login</strong> or <strong>signup</strong> to get started.</small>
+        </div>
+        {% endif %}
+        
+        {% if show_help %}
+        <div class="mt-2">
+            <small>Type <strong>help</strong> for available commands.</small>
+        </div>
+        {% endif %}
+    </div>
+</div>

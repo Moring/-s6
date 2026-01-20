@@ -11,6 +11,8 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('api/', include('apps.api.urls')),
     path('system/', include('apps.system.urls')),
+    # Frontend UI
+    path('', include('frontend.urls')),
     # API schema and docs
     path('api/schema/', SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[IsAdminUser]), name='swagger-ui'),

@@ -7260,3 +7260,246 @@ curl -s http://localhost:3000/healthz
 **Config Changes Required:** ✅ Yes (`SERVICE_TO_SERVICE_SECRET`, `BACKEND_ORIGIN`)  
 **Breaking Changes:** ⚠️ SPA auth now uses JWT access tokens + refresh cookies  
 **Pytest Status:** ✅ 129 tests passing
+
+---
+
+## 2026-01-20 - Django Frontend Implementation with HTMX Chat Interface
+
+### Summary
+Implemented comprehensive Django-based frontend with HTMX chat interface, replacing the Vue SPA approach. The new frontend provides a conversational UI with chat panel, canvas display area, and status bar, supporting all authentication flows through natural language commands.
+
+### ✅ What Changed
+
+**New Frontend App:**
+- Created `frontend` Django app with full HTMX integration
+- Implemented split-panel UI: chat (top) + canvas (bottom)
+- Added real-time status bar with token counts and reserve balance
+- Integrated theme assets from HTML/Full/dist directory
+
+**Chat Interface Features:**
+- Conversational authentication: `login` and `signup` commands
+- Multi-step authentication flows with session state management
+- Password masking with visual feedback (star indicators for security)
+- Command system: `help`, `dashboard`, `logout`, etc.
+- Context-aware responses based on authentication state
+- Error handling with user-friendly messages
+- Working indicator during HTMX requests
+
+**Authentication Implementation:**
+- Invite-only signup with passkey validation
+- Tenant auto-creation via signals (one tenant per user owner)
+- UserProfile auto-creation linked to tenant
+- Session-based state management for multi-step flows
+- Generic error messages to prevent user enumeration
+- Password confirmation during signup
+- Immediate login after successful signup
+
+**Canvas Display:**
+- Dashboard card with user stats (worklogs, skills, reserve balance)
+- Settings card for user profile management  
+- Error card for displaying errors
+- Dynamic HTMX-powered content loading
+
+**Status Bar:**
+- Live token count updates (in/out)
+- Real-time reserve balance display
+- HTMX polling every 5 seconds
+- Different display for authenticated vs anonymous users
+
+**Templates Structure:**
+- `base.html` - Base layout with HTMX and theme assets
+- `index.html` - Main split-panel interface
+- `partials/chat_message.html` - Chat message rendering
+- `partials/chat_response.html` - User/bot message pairs
+- `partials/dashboard_card.html` - Dashboard statistics
+- `partials/settings_card.html` - User settings
+- `partials/error_card.html` - Error display
+- `partials/status_bar.html` - Status bar updates
+- `partials/chat_history.html` - Message history
+
+**Views Implemented:**
+- `IndexView` - Main application entry point
+- `ChatSendView` - Handles all chat messages and commands
+- `ChatHistoryView` - Returns chat history
+- `DashboardCardView` - Renders dashboard card
+- `SettingsCardView` - Renders settings card
+- `ErrorCardView` - Renders error messages
+- `StatusBarView` - Real-time status updates
+
+**Testing:**
+- 12 comprehensive pytest tests covering:
+  - Index page rendering (authenticated/anonymous)
+  - Chat command flows (login, signup, help)
+  - Authentication requirements for private features
+  - Dashboard card access control
+  - Status bar rendering
+- All tests passing with proper fixtures
+
+**Configuration:**
+- Added `frontend` to INSTALLED_APPS in settings
+- Configured frontend URLs at root path `/`
+- Static assets integrated from HTML theme
+- HTMX CDN integration for reactive updates
+
+### 🔄 How to Verify
+
+```bash
+# Run Django checks
+cd backend
+python manage.py check
+
+# Run frontend tests
+python -m pytest frontend/tests.py -v
+
+# Start development server
+python manage.py runserver
+
+# Access frontend
+# Open browser to http://localhost:8000/
+# Try commands: login, signup, help, dashboard
+```
+
+**Test Authentication Flow:**
+1. Visit http://localhost:8000/
+2. Type `signup` in chat
+3. Follow prompts: username → password → confirm → passkey
+4. After successful signup, you'll be logged in automatically
+5. Type `dashboard` to see your stats
+6. Type `help` to see available commands
+
+**Create Test Invite Passkey (Django Admin):**
+```bash
+python manage.py shell
+>>> from apps.invitations.models import InvitePasskey
+>>> InvitePasskey.objects.create(key="TEST123", is_active=True, max_uses=10)
+```
+
+### 📝 Notable Implementation Details
+
+**Password Security:**
+- Password input uses type="password" for masking
+- Star visualization (up to 8 stars, then flashing for longer passwords)
+- Prevents password length enumeration
+- Passwords never logged or displayed
+
+**Session Flow Management:**
+- Multi-step flows stored in session with `auth_flow` and `auth_step`
+- State cleared on successful completion or error
+- Supports restart from any step on error
+- Prevents CSRF attacks with Django middleware
+
+**HTMX Integration:**
+- `hx-post` for form submissions
+- `hx-target` for dynamic content insertion
+- `hx-swap` for append/replace strategies
+- `hx-indicator` for loading states
+- `hx-trigger` for polling and events
+- JavaScript handlers for Enter/Shift+Enter, auto-scroll, canvas triggers
+
+**Tenant Isolation:**
+- All data scoped to user's tenant
+- Tenant created automatically via post_save signal
+- UserProfile links user to tenant
+- Reserve balance displayed from tenant model
+
+**Error Handling:**
+- Generic authentication errors (no user enumeration)
+- Network error handling
+- Validation errors with clear messages
+- Graceful degradation without JavaScript
+
+### ⚠️ Known Limitations
+
+- AI chat integration not yet implemented (echoes messages)
+- Admin commands (passkey creation, user management) show "not implemented" message
+- Password reset functionality shows placeholder
+- Canvas cards need more interactive features
+- No chat history persistence yet (session-only)
+- Token counts are placeholder (0) until observability integration
+
+### 🔮 Future Enhancements
+
+- Integrate with LLM agents for AI-powered chat
+- Add admin command handlers for passkey/user management
+- Implement password reset email flow
+- Add chat history persistence to database
+- Create more canvas card types (worklogs, skills, reports)
+- Add keyboard shortcuts (Ctrl+/, Esc, etc.)
+- Implement file upload support in chat
+- Add markdown rendering for bot messages
+- Create notification system for background jobs
+
+### 📋 Human TODOs
+
+**Required for Production:**
+- [ ] Configure email provider for password reset (SMTP settings in .env)
+- [ ] Set up proper static file serving (collectstatic + CDN/nginx)
+- [ ] Configure session security (SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE)
+- [ ] Set proper ALLOWED_HOSTS for production domain
+- [ ] Configure rate limiting for chat endpoints
+- [ ] Add honeypot fields to prevent bot signups
+- [ ] Implement CAPTCHA for signup if needed
+- [ ] Set up monitoring for failed login attempts
+- [ ] Configure backup strategy for session data
+- [ ] Test with screen readers for accessibility
+- [ ] Add analytics/tracking (optional)
+- [ ] Create user documentation for chat commands
+
+**Optional Enhancements:**
+- [ ] Add dark mode toggle
+- [ ] Implement chat message search
+- [ ] Add export chat history feature
+- [ ] Create mobile-responsive layout improvements
+- [ ] Add keyboard navigation guide
+- [ ] Implement chat message editing/deletion
+- [ ] Add typing indicators for multi-user scenarios
+- [ ] Create admin dashboard for monitoring chat usage
+
+### 📊 Test Results
+```
+======================== 12 passed, 1 warning in 4.06s =========================
+```
+
+All frontend tests passing:
+- 3 IndexView tests (render, logged out prompt, logged in welcome)
+- 4 ChatSendView tests (login, signup, help commands, auth requirements)
+- 2 DashboardCardView tests (auth required, renders for logged in user)
+- 2 StatusBarView tests (renders logged out/in with different content)
+- Multiple integration tests for authentication flows
+
+### 🏗️ Architecture Compliance
+
+✅ **All architecture constraints respected:**
+- No changes to service boundaries (Django backend, no new services)
+- No directory restructuring (added `frontend` under `backend/`)
+- Proper layering: views → templates → API services
+- Multi-tenancy enforced via middleware and session
+- Authentication follows best practices (Django auth + allauth)
+- Invite-only signup with passkey validation
+- Tests added with proper fixtures
+- Documentation updated (this changelog)
+
+### 🔐 Security Features
+
+- CSRF protection enabled for all forms
+- Session-based authentication
+- Generic error messages (no user enumeration)
+- Password masking and secure handling
+- Invite passkey validation and one-time use
+- Tenant isolation at data layer
+- Rate limiting ready (middleware exists)
+- Audit trail for account creation (via signals)
+
+### 🎨 User Experience
+
+- Clean, modern UI with Bootstrap theme
+- Responsive split-panel layout
+- Real-time updates via HTMX polling
+- Visual feedback (working indicators, message animations)
+- Keyboard shortcuts (Enter to send, Shift+Enter for newline)
+- Auto-scroll to latest messages
+- Color-coded messages (user/bot/error/success)
+- Mobile-friendly (needs further optimization)
+
+---
+

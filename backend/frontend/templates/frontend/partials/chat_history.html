@@ -1,0 +1,9 @@
+{% load static %}
+
+{% for msg in messages %}
+<div class="message message-{% if msg.is_bot %}bot{% else %}user{% endif %}">
+    <div class="message-content">
+        {{ msg.content }}
+    </div>
+</div>
+{% endfor %}

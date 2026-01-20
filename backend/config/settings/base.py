@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'apps.api',
     'apps.system',
     'apps.billing',
+    # Frontend UI
+    'frontend',
 ]
 
 MIDDLEWARE = [

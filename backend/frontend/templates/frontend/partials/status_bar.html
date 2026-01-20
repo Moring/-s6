@@ -1,0 +1,15 @@
+{% load static %}
+
+<div class="status-left">
+    <span class="status-item">
+        Session Tokens: <strong id="token-count">{{ tokens_in|add:tokens_out }}</strong>
+        {% if is_authenticated %}
+        (In: {{ tokens_in }}, Out: {{ tokens_out }})
+        {% endif %}
+    </span>
+</div>
+<div class="status-right">
+    <span class="status-item">
+        Reserve Balance: <strong id="reserve-balance">${{ reserve_balance|floatformat:2 }}</strong>
+    </span>
+</div>
