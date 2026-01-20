@@ -39,6 +39,12 @@ export const allRoutes = [
                 meta: { title: 'Projects', requiresAuth: true },
             },
             {
+                path: 'worklog/epics',
+                name: 'worklog-epics',
+                component: () => import('@/views/afterresume/worklog/EpicsView.vue'),
+                meta: { title: 'Epics', requiresAuth: true },
+            },
+            {
                 path: 'worklog/debug',
                 name: 'worklog-debug',
                 component: () => import('@/views/afterresume/worklog/debug.vue'),
