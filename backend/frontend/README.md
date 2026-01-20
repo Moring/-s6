@@ -251,3 +251,93 @@ When adding features:
 3. Add tests for new functionality
 4. Update this README
 5. Add entry to CHANGE_LOG.md
+
+## Login Form in Canvas
+
+### Overview
+For non-authenticated users, a login form is automatically displayed in the canvas area, providing a traditional form-based alternative to the chat-based login flow.
+
+### Features
+
+**Login Form Fields:**
+- Username (text input with autocomplete)
+- Password (password input with autocomplete)
+- Remember me (checkbox for extended session)
+
+**Submit Behavior:**
+- HTMX POST to `/login/`
+- Validates credentials via Django auth
+- Sets session expiry based on remember_me:
+  - Unchecked: Session expires when browser closes
+  - Checked: Session lasts 30 days
+- Returns success card with auto-redirect
+- Returns error card with generic message on failure
+
+**Error Handling:**
+- Empty fields: "Please enter both username and password"
+- Invalid credentials: "We do not recognize that username and password"
+- Generic messages prevent user enumeration
+- Inline error display in form
+
+**Success Flow:**
+1. Form submits via HTMX
+2. Success card displays with welcome message
+3. Loading spinner shows
+4. Dashboard loads after 1 second
+5. Page reloads to update chat interface
+6. User is fully authenticated
+
+### Usage
+
+The login form appears automatically when:
+- User is not authenticated
+- User visits the main page (`/`)
+- No login command in chat required
+
+Users can still use chat-based login:
+- Type `login` in chat
+- Follow multi-step prompts
+- Same backend authentication
+
+Both methods are equivalent and secure.
+
+### Testing
+
+```bash
+# Run login form tests
+python -m pytest frontend/tests.py::TestLoginFormView -v
+
+# All 4 tests:
+# - test_login_form_submission_success
+# - test_login_form_submission_failure
+# - test_login_form_empty_fields
+# - test_login_form_remember_me_sets_session
+```
+
+### Templates
+
+- `partials/login_form_card.html` - Login form UI
+- `partials/login_success_card.html` - Success message with redirect
+
+### View
+
+```python
+class LoginFormView(View):
+    """Handle login form submission from canvas."""
+    
+    def post(self, request):
+        # Validate input
+        # Authenticate user
+        # Set session expiry
+        # Return success or error card
+```
+
+### Security
+
+- CSRF protection enabled
+- Generic error messages
+- Session security configured
+- Password field masked
+- Rate limiting ready
+- Audit logging via signals
+

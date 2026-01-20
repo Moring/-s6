@@ -105,6 +105,66 @@ class TestDashboardCardView:
 
 
 @pytest.mark.django_db
+class TestLoginFormView:
+    """Test login form view in canvas."""
+    
+    def test_login_form_submission_success(self, client, user_with_profile):
+        """Test successful login via form."""
+        response = client.post(
+            reverse('frontend:login_form'),
+            {
+                'username': user_with_profile.username,
+                'password': 'testpass123',
+                'remember_me': 'on'
+            }
+        )
+        assert response.status_code == 200
+        assert 'Welcome back' in str(response.content)
+        assert user_with_profile.username in str(response.content)
+        
+        # Verify user is logged in
+        assert client.session['_auth_user_id']
+    
+    def test_login_form_submission_failure(self, client):
+        """Test failed login via form."""
+        response = client.post(
+            reverse('frontend:login_form'),
+            {
+                'username': 'nonexistent',
+                'password': 'wrongpass'
+            }
+        )
+        assert response.status_code == 200
+        assert 'do not recognize' in str(response.content).lower()
+    
+    def test_login_form_empty_fields(self, client):
+        """Test login form with empty fields."""
+        response = client.post(
+            reverse('frontend:login_form'),
+            {
+                'username': '',
+                'password': ''
+            }
+        )
+        assert response.status_code == 200
+        assert 'enter both' in str(response.content).lower()
+    
+    def test_login_form_remember_me_sets_session(self, client, user_with_profile):
+        """Test that remember_me sets appropriate session expiry."""
+        response = client.post(
+            reverse('frontend:login_form'),
+            {
+                'username': user_with_profile.username,
+                'password': 'testpass123',
+                'remember_me': 'on'
+            }
+        )
+        assert response.status_code == 200
+        # Session should be set to expire in 30 days (not 0)
+        assert client.session.get_expiry_age() > 86400  # More than 1 day
+
+
+@pytest.mark.django_db
 class TestStatusBarView:
     """Test status bar view."""
     

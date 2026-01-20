@@ -1,0 +1,87 @@
+{% load static %}
+
+<div class="canvas-card">
+    <div class="canvas-card-title">
+        <i class="ti ti-login"></i> Sign In
+    </div>
+    
+    <p class="text-muted mb-4">
+        Sign in to access your account and manage your work logs, skills, and reports.
+    </p>
+    
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="ti ti-alert-circle me-2"></i>{{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    
+    <form id="login-form" 
+          hx-post="{% url 'frontend:login_form' %}" 
+          hx-target="#canvas-area" 
+          hx-indicator="#login-indicator">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" 
+                   class="form-control" 
+                   id="username" 
+                   name="username" 
+                   placeholder="Enter your username"
+                   required
+                   autocomplete="username">
+        </div>
+        
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" 
+                   class="form-control" 
+                   id="password" 
+                   name="password" 
+                   placeholder="Enter your password"
+                   required
+                   autocomplete="current-password">
+        </div>
+        
+        <div class="mb-3 form-check">
+            <input type="checkbox" 
+                   class="form-check-input" 
+                   id="remember_me" 
+                   name="remember_me">
+            <label class="form-check-label" for="remember_me">
+                Remember me on this device
+            </label>
+        </div>
+        
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+                <span id="login-indicator" class="htmx-indicator">
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                </span>
+                Sign In
+            </button>
+        </div>
+    </form>
+    
+    <div class="mt-4 text-center">
+        <p class="text-muted mb-2">
+            Don't have an account? Type <strong>signup</strong> in the chat above.
+        </p>
+        <p class="text-muted">
+            <a href="#" class="text-decoration-none" onclick="alert('Password reset via chat: type \\'reset password\\' in the chat above'); return false;">
+                Forgot your password?
+            </a>
+        </p>
+    </div>
+</div>
+
+<style>
+    #login-form .htmx-indicator {
+        display: none;
+    }
+    
+    #login-form.htmx-request .htmx-indicator {
+        display: inline-block;
+    }
+</style>

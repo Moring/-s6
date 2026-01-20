@@ -19,6 +19,9 @@ urlpatterns = [
     path('canvas/settings/', views.SettingsCardView.as_view(), name='settings_card'),
     path('canvas/error/', views.ErrorCardView.as_view(), name='error_card'),
     
+    # Login form (HTMX)
+    path('login/', views.LoginFormView.as_view(), name='login_form'),
+    
     # Status bar (HTMX polling)
     path('status/', views.StatusBarView.as_view(), name='status_bar'),
 ]

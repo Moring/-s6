@@ -7503,3 +7503,165 @@ All frontend tests passing:
 
 ---
 
+
+---
+
+## 2026-01-20 (Afternoon) - Login Form in Canvas for Anonymous Users
+
+### Summary
+Added a login form in the canvas area for non-authenticated users, allowing direct login without using chat commands. The form submits via HTMX to the backend API and provides immediate feedback.
+
+### ✅ What Changed
+
+**New Login Form Component:**
+- Login form displayed in canvas when user is not authenticated
+- Username and password fields with proper autocomplete attributes
+- "Remember me" checkbox for extended session (30 days vs. browser close)
+- Submit via HTMX to backend API endpoint
+- Real-time validation and error display
+- Success message with auto-redirect to dashboard
+- Links to signup (via chat) and password reset
+
+**New View:**
+- `LoginFormView` - Handles form submission
+  - Validates credentials
+  - Authenticates user
+  - Sets session expiry based on remember_me
+  - Returns success or error card
+  - Generic error messages (no user enumeration)
+
+**New Templates:**
+- `login_form_card.html` - Login form UI
+- `login_success_card.html` - Success message with auto-dashboard load
+
+**Enhanced Index Page:**
+- Shows login form in canvas for anonymous users
+- Shows placeholder message for authenticated users
+- Conditional rendering based on auth state
+
+**New Tests (4 added):**
+- `test_login_form_submission_success` - Successful login
+- `test_login_form_submission_failure` - Failed login
+- `test_login_form_empty_fields` - Empty field validation
+- `test_login_form_remember_me_sets_session` - Session expiry
+
+### 🔄 How to Verify
+
+```bash
+# Run tests
+cd backend
+python -m pytest frontend/tests.py -v
+# Expected: 16 passed
+
+# Test in browser
+python manage.py runserver
+# Open: http://localhost:8000/
+# Should see login form in canvas area
+# Try logging in with valid credentials
+```
+
+**Test Login Flow:**
+1. Open http://localhost:8000/ (not logged in)
+2. See login form in canvas (bottom panel)
+3. Enter username and password
+4. Check "Remember me" (optional)
+5. Click "Sign In"
+6. See success message
+7. Dashboard auto-loads
+8. Page reloads with authenticated state
+
+**Alternative: Chat Login Still Works:**
+- Type `login` in chat
+- Follow multi-step prompts
+- Both methods work seamlessly
+
+### 📝 Features
+
+**Login Form:**
+- Clean, accessible UI with Bootstrap styling
+- Proper HTML5 input types and autocomplete
+- CSRF protection
+- Loading indicator during submission
+- Inline error messages
+- Auto-focus on first field
+- Mobile-responsive
+
+**Session Management:**
+- Remember me OFF: Session expires when browser closes
+- Remember me ON: Session lasts 30 days
+- Configurable via Django session settings
+- Secure cookie handling
+
+**Security:**
+- Generic error messages (prevents user enumeration)
+- CSRF token validation
+- Password field masking
+- Rate limiting ready (existing middleware)
+- Audit logging via existing signals
+
+**UX Enhancements:**
+- Immediate visual feedback
+- Smooth transitions with HTMX
+- Success message with countdown
+- Auto-redirect to dashboard
+- Page reload to update chat state
+- Help text for signup and password reset
+
+### 🎯 User Experience
+
+**Before:** Users had to type `login` in chat and go through multi-step prompts
+
+**After:** Users can:
+- Use traditional login form in canvas OR
+- Use chat command `login` for conversational flow
+- Both methods work identically on the backend
+
+### 📊 Test Results
+
+```
+======================== 16 passed, 1 warning in 5.77s =========================
+```
+
+All tests passing including:
+- 3 IndexView tests
+- 5 ChatSendView tests
+- 2 DashboardCardView tests
+- 4 LoginFormView tests (NEW)
+- 2 StatusBarView tests
+
+### 🔐 Security Compliance
+
+✅ All security requirements maintained:
+- CSRF protection on form
+- Generic error messages
+- Session security
+- Password masking
+- No user enumeration
+- Audit trail via signals
+
+### 📋 Human TODOs
+
+**No new TODOs** - Uses existing security infrastructure:
+- CSRF already configured
+- Session security settings already in place
+- Rate limiting middleware already available
+- Audit logging already implemented
+
+**Optional Enhancements:**
+- [ ] Add CAPTCHA to login form after N failed attempts
+- [ ] Add "Show password" toggle
+- [ ] Add keyboard shortcuts (Ctrl+Enter to submit)
+- [ ] Add social login buttons (Google, GitHub, etc.)
+
+### 🔮 Future Enhancements
+
+- Social authentication (OAuth providers)
+- Biometric authentication (WebAuthn)
+- Magic link login (passwordless)
+- Two-factor authentication UI
+- Password strength indicator on signup form
+- Account lockout after failed attempts
+- IP-based security alerts
+
+---
+

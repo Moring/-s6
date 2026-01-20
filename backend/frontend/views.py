@@ -427,6 +427,43 @@ class ErrorCardView(View):
         })
 
 
+class LoginFormView(View):
+    """Handle login form submission from canvas."""
+    
+    def post(self, request):
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        remember_me = request.POST.get('remember_me') == 'on'
+        
+        if not username or not password:
+            return render(request, 'frontend/partials/login_form_card.html', {
+                'error': 'Please enter both username and password.'
+            })
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            
+            # Set session expiry based on remember_me
+            if not remember_me:
+                # Session expires when browser closes
+                request.session.set_expiry(0)
+            else:
+                # Session lasts 30 days
+                request.session.set_expiry(2592000)  # 30 days in seconds
+            
+            # Return success message and trigger dashboard load
+            return render(request, 'frontend/partials/login_success_card.html', {
+                'username': user.username
+            })
+        else:
+            # Generic error message to prevent user enumeration
+            return render(request, 'frontend/partials/login_form_card.html', {
+                'error': 'We do not recognize that username and password. Please try again.'
+            })
+
+
 class StatusBarView(View):
     """Return status bar information (for HTMX polling)."""
     

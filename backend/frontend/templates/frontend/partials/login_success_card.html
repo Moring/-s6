@@ -1,0 +1,33 @@
+{% load static %}
+
+<div class="canvas-card">
+    <div class="canvas-card-title text-success">
+        <i class="ti ti-check-circle"></i> Login Successful!
+    </div>
+    
+    <div class="alert alert-success" role="alert">
+        <h5 class="alert-heading">Welcome back, {{ username }}!</h5>
+        <p class="mb-0">You have been successfully logged in. Loading your dashboard...</p>
+    </div>
+    
+    <div class="d-flex justify-content-center my-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-load dashboard after 1 second
+    setTimeout(function() {
+        htmx.ajax('GET', '{% url "frontend:dashboard_card" %}', {
+            target: '#canvas-area',
+            swap: 'innerHTML'
+        });
+        
+        // Also reload the page to update the chat interface
+        setTimeout(function() {
+            location.reload();
+        }, 500);
+    }, 1000);
+</script>

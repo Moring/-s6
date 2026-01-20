@@ -228,10 +228,14 @@
         
         <!-- Bottom Panel: Canvas -->
         <div class="canvas-area" id="canvas-area">
-            <div class="canvas-card">
-                <div class="canvas-card-title">Canvas</div>
-                <p class="text-muted">Chat actions will display structured results here.</p>
-            </div>
+            {% if not is_authenticated %}
+                {% include 'frontend/partials/login_form_card.html' %}
+            {% else %}
+                <div class="canvas-card">
+                    <div class="canvas-card-title">Canvas</div>
+                    <p class="text-muted">Chat actions will display structured results here. Type <strong>dashboard</strong> to see your stats.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
     
