@@ -139,9 +139,7 @@ tasks:
       - task: network
       - DJANGO_SETTINGS_MODULE=config.settings.dev DEBUG=1 docker compose -f backend/docker-compose.yml --env-file .env up -d
       - task: wait-for-backend
-      - cd frontend && npm ci --no-audit --no-fund || true
-      - cd frontend && npm run dev
-      - 'echo "Development environment is up! Frontend: http://localhost:3000"'
+
 
   # === Testing ===
   
@@ -197,12 +195,10 @@ tasks:
   'deploy:frontend':
     desc: Deploy frontend to WireGuard host and tail logs
     cmds:
-      - rsync -az --delete --info=progress2 ./frontend/ root@10.6.0.3:/root/frontend/
-      - ssh root@10.6.0.3 "mkdir -p /root/frontend/traefik && [ -f /root/frontend/traefik/acme.json ] || printf '%s\n' '{}' > /root/frontend/traefik/acme.json && chmod 600 /root/frontend/traefik/acme.json"
-      - ssh root@10.6.0.3 "printf '%s\n' 'VITE_API_BASE_URL=http://turing.appliedautonomics.com:8000' > /root/frontend/.env && chmod 600 /root/frontend/.env"
-      - ssh root@10.6.0.3 "echo 'Checking connectivity to backend http://turing.appliedautonomics.com:8000' && curl -sS --max-time 5 http://turing.appliedautonomics.com:8000/v2/ || echo 'Backend not reachable from frontend host'"
-      - ssh -t root@10.6.0.3 "cd /root/frontend && docker compose -f docker-compose.yml --env-file .env --profile traefik up --build -d && docker compose -f docker-compose.yml logs -f frontend"
-
+      - rsync -az --delete --info=progress2 --exclude 'traefik/' ./endpoint/ root@cassini.appliedautonomics.com:/root/endpoint/
+      - ssh root@cassini.appliedautonomics.com "mkdir -p /root/endpoint/traefik && [ -f /root/endpoint/traefik/acme.json ] || printf '%s\n' '{}' > /root/endpoint/traefik/acme.json && chmod 600 /root/endpoint/traefik/acme.json"
+      - ssh root@cassini.appliedautonomics.com "echo 'Checking connectivity to backend http://turing.appliedautonomics.com:8000' && curl -sS --max-time 5 http://turing.appliedautonomics.com:8000/v2/ || echo 'Backend not reachable from frontend host'"
+      - ssh -t root@cassini.appliedautonomics.com "cd /root/endpoint && docker compose -f docker-compose.yml --env-file .env --profile traefik up --build -d && docker compose -f docker-compose.yml logs -f traefik"
   'deploy:backend':
     desc: Deploy backend to WireGuard host and tail logs
     cmds:
