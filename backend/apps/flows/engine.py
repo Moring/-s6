@@ -92,6 +92,10 @@ class FlowEngine:
         flow_name = selection['flow_name']
         logger.info(f"Selected flow: {flow_name} (confidence: {selection['confidence']})")
         
+        # Track tokens from selection
+        selection_tokens_in = selection.get('tokens_in', 0)
+        selection_tokens_out = selection.get('tokens_out', 0)
+        
         # 4. Get flow definition
         flow_def = self._flows.get(flow_name)
         
@@ -105,11 +109,19 @@ class FlowEngine:
                 'response': self._get_fallback_response(user_prompt, is_authenticated),
                 'requires_input': False,
                 'flow_active': False,
-                'error': 'No flows available'
+                'error': 'No flows available',
+                'tokens_in': selection_tokens_in,
+                'tokens_out': selection_tokens_out
             }
         
         # 5. Execute flow
-        return self._execute_flow(flow_def, context, user_prompt)
+        result = self._execute_flow(flow_def, context, user_prompt)
+        
+        # Add selection tokens to execution result
+        result['tokens_in'] = result.get('tokens_in', 0) + selection_tokens_in
+        result['tokens_out'] = result.get('tokens_out', 0) + selection_tokens_out
+        
+        return result
     
     def _continue_flow(self, context: FlowContext, user_prompt: str) -> Dict[str, Any]:
         """Continue executing an active flow."""
@@ -144,6 +156,8 @@ class FlowEngine:
             'flow_name': context.flow_name,
             'current_node': context.current_node,
             'error': execution_result.get('error', False),
+            'tokens_in': execution_result.get('tokens_in', 0),
+            'tokens_out': execution_result.get('tokens_out', 0),
             'metadata': execution_result
         }
     

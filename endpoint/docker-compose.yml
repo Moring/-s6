@@ -33,7 +33,7 @@ services:
 
       # Backend service
       - "traefik.http.services.agentic.loadbalancer.server.url=http://turing.appliedautonomics.com:8000"
-      - "traefik.http.services.agentic.loadbalancer.healthcheck.path=/api/healthz"
+      - "traefik.http.services.agentic.loadbalancer.healthcheck.path=/api/healthz/"
       - "traefik.http.services.agentic.loadbalancer.healthcheck.hostname=agentic.digimuse.ai"
       - "traefik.http.services.agentic.loadbalancer.healthcheck.interval=10s"
       - "traefik.http.services.agentic.loadbalancer.healthcheck.timeout=3s"

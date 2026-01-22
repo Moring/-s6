@@ -104,6 +104,14 @@ class ChatSendView(View):
             user_data=user_data
         )
         
+        # Track token usage in session
+        if result.get('tokens_in') or result.get('tokens_out'):
+            token_usage = request.session.get('token_usage', {'input': 0, 'output': 0})
+            token_usage['input'] += result.get('tokens_in', 0)
+            token_usage['output'] += result.get('tokens_out', 0)
+            request.session['token_usage'] = token_usage
+            request.session.modified = True
+        
         # Return formatted response
         return render(request, 'frontend/partials/chat_response.html', {
             'user_message': message,
@@ -548,10 +556,19 @@ class StatusBarView(View):
     """Return status bar information (for HTMX polling)."""
     
     def get(self, request):
+        # Initialize token counts
+        tokens_in = 0
+        tokens_out = 0
+        
+        # Get token counts from session (updated during chat interactions)
+        session_tokens = request.session.get('token_usage', {})
+        tokens_in = session_tokens.get('input', 0)
+        tokens_out = session_tokens.get('output', 0)
+        
         if not request.user.is_authenticated:
             return render(request, 'frontend/partials/status_bar.html', {
-                'tokens_in': 0,
-                'tokens_out': 0,
+                'tokens_in': tokens_in,
+                'tokens_out': tokens_out,
                 'reserve_balance': 0,
                 'is_authenticated': False
             })
@@ -564,9 +581,31 @@ class StatusBarView(View):
         except:
             reserve_balance = 0
         
-        # TODO: Get actual token counts from jobs/observability
-        tokens_in = 0
-        tokens_out = 0
+        # For authenticated users, also get token counts from recent Events
+        try:
+            from apps.observability.models import Event
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            # Get LLM events from the last hour for this user's jobs
+            one_hour_ago = timezone.now() - timedelta(hours=1)
+            llm_events = Event.objects.filter(
+                job__tenant=tenant,
+                source='llm',
+                timestamp__gte=one_hour_ago,
+                data__has_key='tokens_in'
+            ).order_by('-timestamp')[:100]  # Limit to recent events
+            
+            # Sum up tokens from events
+            event_tokens_in = sum(event.data.get('tokens_in', 0) for event in llm_events)
+            event_tokens_out = sum(event.data.get('tokens_out', 0) for event in llm_events)
+            
+            # Use the higher of session or event counts
+            tokens_in = max(tokens_in, event_tokens_in)
+            tokens_out = max(tokens_out, event_tokens_out)
+            
+        except Exception as e:
+            logger.debug(f"Could not fetch event token counts: {e}")
         
         return render(request, 'frontend/partials/status_bar.html', {
             'tokens_in': tokens_in,

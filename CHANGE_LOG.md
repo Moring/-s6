@@ -4,6 +4,26 @@ This file tracks all significant changes to the AfterResume system.
 
 ---
 
+## 2026-01-22 19:20:37 UTC
+
+### Summary
+- Allow Google Fonts sources in CSP and include extra sources in `font-src`.
+- Fix frontend base template to load existing JS asset filenames.
+
+### Migrations/Config Changes
+- `backend/config/settings/base.py`: extend `CSP_EXTRA_SRC` with Google Fonts hosts.
+
+### How to Verify
+- `pytest` (currently fails due to pre-existing WorkLog date/occurred_on mismatches and readyz errors).
+
+### Notable Risks/Assumptions
+- CSP now permits Google Fonts domains; consider self-hosting fonts if external dependencies are undesired.
+
+### Human TODOs
+- [ ] Decide whether to self-host fonts and remove Google Fonts from CSP.
+- [ ] Resolve existing pytest failures unrelated to this change (WorkLog date/occurred_on and readyz failures).
+- [ ] Deploy updated CSP settings to environments enforcing security headers.
+
 ## 2026-01-18 (Night) - Phase 2 Implementation Start: Database Schema Reset & System Baseline
 
 ### Summary
@@ -8269,4 +8289,3 @@ All frontend tests passing:
 - ⏳ ADMIN_GUIDE.md - Flow management section needed
 
 ---
-

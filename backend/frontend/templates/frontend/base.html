@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light" data-menu-color="dark" data-topbar-color="light">
+<html lang="en" data-bs-theme="light" data-menu-color="dark" data-topbar-color="light" data-sidenav-size="offcanvas">
 <head>
     <meta charset="utf-8" />
     <title>{% block title %}DigiMuse.ai - AI-Powered Career Intelligence{% endblock %}</title>
@@ -36,27 +36,43 @@
             text-transform: uppercase;
         }
         
-        .top-bar {
-            height: 60px;
+        .avatar-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .app-topbar {
+            height: 70px;
             background: white;
             border-bottom: 1px solid #e9ecef;
-            display: flex;
-            align-items: center;
-            padding: 0 24px;
             position: sticky;
             top: 0;
             z-index: 1000;
         }
         
-        .top-bar .brand {
+        .topbar-menu {
+            height: 100%;
+        }
+        
+        .logo-topbar a {
             font-weight: 700;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             color: #667eea;
             text-decoration: none;
         }
         
-        .top-bar .user-menu {
-            margin-left: auto;
+        .topbar-link {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: #6c757d;
+        }
+        
+        .topbar-link:hover {
+            color: #667eea;
         }
         
         body {
@@ -76,118 +92,112 @@
 <body>
     <!-- Begin page -->
     <div class="wrapper">
-        <!-- Top Bar -->
-        <nav class="top-bar">
-            <!-- Brand -->
-            <a class="brand" href="/">DigiMuse.ai</a>
-            
-            <!-- Right side: User menu -->
-            <div class="user-menu">
-                {% if is_authenticated %}
-                <div class="dropdown">
-                    <button class="btn btn-link text-decoration-none p-0" 
-                            type="button" 
-                            id="userMenuDropdown" 
-                            data-bs-toggle="dropdown" 
-                            aria-expanded="false">
-                        <div class="d-flex align-items-center gap-2">
-                            <!-- User Avatar/Graphicon -->
-                            <div class="avatar-circle">
-                                {{ username|slice:":1" }}
-                            </div>
-                            <span class="d-none d-md-inline">{{ username }}</span>
-                            <i class="ti ti-chevron-down"></i>
-                        </div>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuDropdown">
-                        <li><h6 class="dropdown-header">{{ username }}</h6></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="#" 
-                               hx-get="{% url 'frontend:dashboard_card' %}" 
-                               hx-target="#canvas-area">
-                                <i class="ti ti-dashboard me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" 
-                               hx-get="{% url 'frontend:settings_card' %}" 
-                               hx-target="#canvas-area">
-                                <i class="ti ti-settings me-2"></i>Settings
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               onclick="alert('Billing & Payments coming soon'); return false;">
-                                <i class="ti ti-credit-card me-2"></i>Billing & Payments
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               onclick="alert('Profile settings coming soon'); return false;">
-                                <i class="ti ti-user me-2"></i>My Profile
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="#"
-                               onclick="alert('Help & Documentation coming soon'); return false;">
-                                <i class="ti ti-help me-2"></i>Help & Support
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="#"
-                               hx-post="{% url 'frontend:logout' %}"
-                               hx-swap="none"
-                               hx-on::after-request="location.reload()">
-                                <i class="ti ti-logout me-2"></i>Sign Out
-                            </a>
-                        </li>
-                    </ul>
+        <div class="sidenav-menu"></div>
+        <!-- Topbar Start -->
+        <header class="app-topbar">
+            <div class="container-fluid topbar-menu">
+                <div class="d-flex align-items-center gap-2 h-100">
+                    <!-- Topbar Brand Logo -->
+                    <div class="logo-topbar">
+                        <a href="/"><div class="fw-bold fs-4">DigiMuse.ai</div></a>
+                    </div>
                 </div>
-                {% else %}
-                <div class="dropdown">
-                    <button class="btn btn-link text-decoration-none p-0" 
-                            type="button" 
-                            id="guestMenuDropdown" 
-                            data-bs-toggle="dropdown" 
-                            aria-expanded="false">
-                        <div class="d-flex align-items-center gap-2">
-                            <!-- Generic graphicon avatar for guest -->
-                            <div class="avatar-circle" title="Account">
-                                <i class="ti ti-user" style="font-size:18px;color:rgba(255,255,255,0.95);"></i>
+
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <!-- User Dropdown -->
+                    <div class="topbar-item nav-user">
+                        {% if is_authenticated %}
+                        <div class="dropdown">
+                            <a class="topbar-link dropdown-toggle drop-arrow-none px-2" data-bs-toggle="dropdown" data-bs-offset="0,16" href="#!" aria-haspopup="false" aria-expanded="false">
+                                {% load gravatar %}
+                                {% if request.user.email %}
+                                <img src="{% gravatar_url request.user.email 32 %}" width="32" class="rounded-circle me-lg-2 d-flex" alt="user-image">
+                                {% else %}
+                                <div class="avatar-circle d-flex me-lg-2">
+                                    {{ username|slice:":1" }}
+                                </div>
+                                {% endif %}
+                                <div class="d-lg-flex align-items-center gap-1 d-none">
+                                    <h5 class="my-0">{{ username }}</h5>
+                                    <i class="ti ti-chevron-down align-middle"></i>
+                                </div>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <!-- Header -->
+                                <div class="dropdown-header noti-title">
+                                    <h6 class="text-overflow m-0">Welcome back!</h6>
+                                </div>
+
+                                <!-- Dashboard -->
+                                <a href="#" class="dropdown-item" 
+                                   hx-get="{% url 'frontend:dashboard_card' %}" 
+                                   hx-target="#canvas-area">
+                                    <i class="ti ti-dashboard me-2 fs-17 align-middle"></i>
+                                    <span class="align-middle">Dashboard</span>
+                                </a>
+
+                                <!-- Settings -->
+                                <a href="#" class="dropdown-item"
+                                   hx-get="{% url 'frontend:settings_card' %}" 
+                                   hx-target="#canvas-area">
+                                    <i class="ti ti-settings-2 me-2 fs-17 align-middle"></i>
+                                    <span class="align-middle">Account Settings</span>
+                                </a>
+
+                                <!-- Divider -->
+                                <div class="dropdown-divider"></div>
+
+                                <!-- Logout -->
+                                <a href="#" class="dropdown-item text-danger fw-semibold"
+                                   hx-post="{% url 'frontend:logout' %}"
+                                   hx-swap="none"
+                                   hx-on::after-request="location.reload()">
+                                    <i class="ti ti-logout-2 me-2 fs-17 align-middle"></i>
+                                    <span class="align-middle">Sign Out</span>
+                                </a>
                             </div>
-                            <i class="ti ti-chevron-down"></i>
                         </div>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="guestMenuDropdown">
-                        <li>
-                            <a class="dropdown-item" href="#" 
-                               onclick="document.getElementById('chat-input').value='login'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
-                                <i class="ti ti-login me-2"></i>Sign In
+                        {% else %}
+                        <div class="dropdown">
+                            <a class="topbar-link dropdown-toggle drop-arrow-none px-2" data-bs-toggle="dropdown" data-bs-offset="0,16" href="#!" aria-haspopup="false" aria-expanded="false">
+                                <div class="avatar-circle d-flex me-lg-2">
+                                    <i class="ti ti-user" style="font-size:18px;"></i>
+                                </div>
+                                <div class="d-lg-flex align-items-center gap-1 d-none">
+                                    <h5 class="my-0">Guest</h5>
+                                    <i class="ti ti-chevron-down align-middle"></i>
+                                </div>
                             </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" 
-                               onclick="document.getElementById('chat-input').value='signup'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
-                                <i class="ti ti-user-plus me-2"></i>Sign Up
-                            </a>
-                        </li>
-                    </ul>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <!-- Header -->
+                                <div class="dropdown-header noti-title">
+                                    <h6 class="text-overflow m-0">Welcome!</h6>
+                                </div>
+
+                                <!-- My Profile -->
+                                <a href="#" class="dropdown-item" 
+                                   onclick="document.getElementById('chat-input').value='login'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
+                                    <i class="ti ti-login me-2 fs-17 align-middle"></i>
+                                    <span class="align-middle">Sign In</span>
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endif %}
             </div>
-        </nav>
+        </header>
+        <!-- Topbar End -->
         
         <!-- Main Content -->
         {% block content %}{% endblock %}
     </div>
 
     <!-- Vendor js -->
-    <script src="{% static 'assets/js/vendor.min.js' %}"></script>
+    <script src="{% static 'assets/js/vendors.min.js' %}"></script>
     
     <!-- App js -->
-    <script src="{% static 'assets/js/app.min.js' %}"></script>
+    <script src="{% static 'assets/js/app.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>

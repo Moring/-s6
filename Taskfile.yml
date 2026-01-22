@@ -202,8 +202,8 @@ tasks:
   'deploy:backend':
     desc: Deploy backend to WireGuard host and tail logs
     cmds:
-      - ssh davmor@10.6.0.5 "mkdir -p /home/davmor/dm/s6/backend"
-      - rsync -az --exclude staticfiles/ --delete --info=progress2 ./backend/ davmor@10.6.0.5:/home/davmor/dm/s6/backend/
-      - rsync -az --info=progress2 /home/davmor/dm/s6/.env davmor@10.6.0.5:/home/davmor/dm/s6/.env
-      - ssh davmor@10.6.0.5 "docker network inspect afterresume-net >/dev/null 2>&1 || docker network create afterresume-net"
-      - ssh -t davmor@10.6.0.5 "cd /home/davmor/dm/s6/backend && DJANGO_SETTINGS_MODULE=config.settings.prod docker compose -f docker-compose.yml --env-file /home/davmor/dm/s6/.env up --build -d && docker compose -f docker-compose.yml logs -f backend-api"
+      - ssh davmor@turing.appliedautonomics.com "mkdir -p /home/davmor/dm/s6/backend"
+      - ssh davmor@turing.appliedautonomics.com "cd /home/davmor/dm/s6/backend && git pull --recurse-submodules && git submodule update --init --recursive || true"
+      - scp /home/davmor/dm/s6/.env davmor@turing.appliedautonomics.com:/home/davmor/dm/s6/.env
+      - ssh davmor@turing.appliedautonomics.com "docker network inspect afterresume-net >/dev/null 2>&1 || docker network create afterresume-net"
+      - ssh -t davmor@turing.appliedautonomics.com "cd /home/davmor/dm/s6/backend && DJANGO_SETTINGS_MODULE=config.settings.prod docker compose -f docker-compose.yml --env-file /home/davmor/dm/s6/.env up --build -d && docker compose -f docker-compose.yml logs -f backend-api"

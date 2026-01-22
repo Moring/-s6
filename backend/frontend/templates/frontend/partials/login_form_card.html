@@ -66,9 +66,13 @@
     
     <div class="mt-4 text-center">
         <p class="text-muted mb-2">
-            Don't have an account? Type <strong>signup</strong> in the chat above.
+            Don't have an account?
         </p>
-        <p class="text-muted">
+        <a href="#" class="btn btn-outline-secondary w-100" 
+           onclick="document.getElementById('chat-input').value='signup'; document.getElementById('chat-form').dispatchEvent(new Event('submit', {bubbles: true})); return false;">
+            <i class="ti ti-user-plus me-2"></i>Create Account
+        </a>
+        <p class="text-muted mt-3">
             <a href="#" class="text-decoration-none" onclick="alert('Password reset via chat: type \\'reset password\\' in the chat above'); return false;">
                 Forgot your password?
             </a>

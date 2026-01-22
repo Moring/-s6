@@ -52,6 +52,10 @@ class FlowSelector:
             # Parse response
             selection = self._parse_selection(response, available_flows)
             
+            # Add token usage from LLM response
+            selection['tokens_in'] = response.get('tokens_in', 0)
+            selection['tokens_out'] = response.get('tokens_out', 0)
+            
             logger.info(f"Flow selected: {selection['flow_name']} (confidence: {selection['confidence']})")
             return selection
             

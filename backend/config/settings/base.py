@@ -324,6 +324,8 @@ SPECTACULAR_SETTINGS = {
 # Include jsDelivr so the default Spectacular Swagger UI CDN assets can load.
 CSP_EXTRA_SRC = [
     'https://cdn.jsdelivr.net',
+    'https://fonts.googleapis.com',
+    'https://fonts.gstatic.com',
 ]
 
 # Cache configuration (Valkey/Redis)

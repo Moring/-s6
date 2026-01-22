@@ -43,10 +43,24 @@ class OllamaProvider:
             data = response.json()
 
             text = data.get('response', '')
-            return {'response': text, 'raw': data}
+            
+            # Extract token counts if available
+            tokens_in = data.get('prompt_eval_count', 0)
+            tokens_out = data.get('eval_count', 0)
+            
+            return {
+                'response': text,
+                'raw': data,
+                'tokens_in': tokens_in,
+                'tokens_out': tokens_out,
+                'total_tokens': tokens_in + tokens_out
+            }
 
         except Exception as e:
             return {
                 'error': str(e),
-                'response': 'Ollama unavailable, using fallback'
+                'response': 'Ollama unavailable, using fallback',
+                'tokens_in': 0,
+                'tokens_out': 0,
+                'total_tokens': 0
             }
