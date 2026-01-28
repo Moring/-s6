@@ -1,43 +1,20 @@
 services:
-  traefik:
-    image: traefik:latest
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entryPoints.web.address=:80"
-      - "--entryPoints.websecure.address=:443"
-      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
-      - "--certificatesResolvers.le.acme.httpChallenge.entryPoint=web"
-      - "--certificatesResolvers.le.acme.email=david@appliedautonomics.com"
-      - "--certificatesResolvers.le.acme.storage=/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "10.6.0.3:8080:8080"   # dashboard (WireGuard only)
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/acme.json:/acme.json
-    networks:
-      - afterresume-network
+  agentic-proxy:
+    image: traefik/whoami
     restart: unless-stopped
     labels:
-      - "traefik.enable=true"
+      - traefik.enable=true
 
-      # Catch-all router → backend
-      - "traefik.http.routers.agentic.rule=Host(`agentic.digimuse.ai`)"
-      - "traefik.http.routers.agentic.entrypoints=websecure"
-      - "traefik.http.routers.agentic.tls=true"
-      - "traefik.http.routers.agentic.tls.certresolver=le"
+      # Router
+      - traefik.http.routers.agentic.rule=Host(`agentic.digimuse.ai`)
+      - traefik.http.routers.agentic.entrypoints=websecure
+      - traefik.http.routers.agentic.tls.certresolver=le
 
-      # Backend service
-      - "traefik.http.services.agentic.loadbalancer.server.url=http://turing.appliedautonomics.com:8000"
-      - "traefik.http.services.agentic.loadbalancer.healthcheck.path=/api/healthz/"
-      - "traefik.http.services.agentic.loadbalancer.healthcheck.hostname=agentic.digimuse.ai"
-      - "traefik.http.services.agentic.loadbalancer.healthcheck.interval=10s"
-      - "traefik.http.services.agentic.loadbalancer.healthcheck.timeout=3s"
+      # Backend service → external machine
+      - traefik.http.services.agentic.loadbalancer.server.url=http://turing.appliedautonomics.com:8000
 
-networks:
-  afterresume-network:
-    driver: bridge
+      # Health check
+      - traefik.http.services.agentic.loadbalancer.healthcheck.path=/api/healthz/
+      - traefik.http.services.agentic.loadbalancer.healthcheck.hostname=agentic.digimuse.ai
+      - traefik.http.services.agentic.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.agentic.loadbalancer.healthcheck.timeout=3s
