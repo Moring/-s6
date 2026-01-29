@@ -27,6 +27,7 @@ services:
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin123}
     volumes:
       - .:/app
+      - backend_static:/app/staticfiles
     depends_on:
       postgres:
         condition: service_healthy
