@@ -9,13 +9,13 @@
     <meta content="DigiMuse.ai" name="author" />
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{% static 'assets/images/favicon.ico' %}">
+    <link rel="shortcut icon" href="{% static 'frontend/assets/images/favicon.ico' %}">
 
     <!-- Theme CSS -->
-    <link href="{% static 'assets/css/app.min.css' %}" rel="stylesheet" type="text/css" id="app-style" />
+    <link href="{% static 'frontend/assets/css/app.min.css' %}" rel="stylesheet" type="text/css" id="app-style" />
     
     <!-- Icons -->
-    <link href="{% static 'assets/css/vendors.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'frontend/assets/css/vendors.min.css' %}" rel="stylesheet" type="text/css" />
     
     <!-- HTMX (use jsDelivr to satisfy CSP) -->
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
@@ -194,10 +194,10 @@
     </div>
 
     <!-- Vendor js -->
-    <script src="{% static 'assets/js/vendors.min.js' %}"></script>
+    <script src="{% static 'frontend/assets/js/vendors.min.js' %}"></script>
     
     <!-- App js -->
-    <script src="{% static 'assets/js/app.js' %}"></script>
+    <script src="{% static 'frontend/assets/js/app.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>
